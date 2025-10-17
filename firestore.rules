@@ -1,0 +1,137 @@
+// Save this as firestore.rules and deploy with:
+// firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========== HELPER FUNCTIONS ==========
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Safe helper to check if user document exists
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Safe helper to get user role (returns null if user doesn't exist)
+    function getUserRole() {
+      return userExists() 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+        : null;
+    }
+    
+    function isAdmin() {
+      return userExists() && getUserRole() == 'admin';
+    }
+    
+    function isManager() {
+      return userExists() && getUserRole() in ['admin', 'manager'];
+    }
+    
+    function isAgent() {
+      return userExists() && getUserRole() in ['admin', 'manager', 'agent'];
+    }
+    
+    // ========== USERS COLLECTION ==========
+    match /users/{userId} {
+      // Allow user creation - any authenticated user can create their own profile
+      allow create: if isAuthenticated() && isOwner(userId) && 
+        request.resource.data.id == userId;
+      
+      // Users can read their own profile and all other users (for task assignment)
+      allow read: if isAuthenticated();
+      
+      // Users can update their own profile
+      allow update: if isAuthenticated() && isOwner(userId);
+      
+      // Users can delete their own profile
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // ========== TASKS COLLECTION ==========
+    match /tasks/{taskId} {
+      // Read: Any authenticated user can read tasks they're related to
+      allow read: if isAuthenticated() && (
+        resource.data.assignedToId == request.auth.uid || 
+        resource.data.createdById == request.auth.uid
+      );
+      
+      // List queries: Allow authenticated users to query tasks
+      // The query must filter by assignedToId or createdById
+      allow list: if isAuthenticated();
+      
+      // Create: Any authenticated user can create tasks
+      allow create: if isAuthenticated() && 
+        request.resource.data.createdById == request.auth.uid;
+      
+      // Update: Users can update tasks they created or are assigned to
+      allow update: if isAuthenticated() && (
+        resource.data.assignedToId == request.auth.uid ||
+        resource.data.createdById == request.auth.uid
+      );
+      
+      // Delete: Users can delete tasks they created
+      allow delete: if isAuthenticated() && 
+        resource.data.createdById == request.auth.uid;
+      
+      // ===== CHECK-INS SUBCOLLECTION =====
+      match /checkIns/{checkinId} {
+        // Any authenticated user can read check-ins for tasks they have access to
+        allow read: if isAuthenticated();
+        
+        // Any authenticated user can create check-ins
+        allow create: if isAuthenticated() && 
+          request.resource.data.userId == request.auth.uid;
+        
+        // Users can update/delete their own check-ins
+        allow update, delete: if isAuthenticated() && 
+          resource.data.userId == request.auth.uid;
+      }
+      
+      // ===== COMMENTS SUBCOLLECTION =====
+      match /comments/{commentId} {
+        // Any authenticated user can read comments
+        allow read: if isAuthenticated();
+        
+        // Any authenticated user can create comments
+        allow create: if isAuthenticated() && 
+          request.resource.data.userId == request.auth.uid;
+        
+        // Users can update/delete their own comments
+        allow update, delete: if isAuthenticated() && 
+          resource.data.userId == request.auth.uid;
+      }
+    }
+    
+    // ========== SYNC QUEUE COLLECTION ==========
+    match /syncQueue/{queueId} {
+      // Users can read and write their own sync queue items
+      allow read, write: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+    }
+    
+    // ========== TEAMS COLLECTION ==========
+    match /teams/{teamId} {
+      // Any authenticated user can read and write teams
+      allow read, write: if isAuthenticated();
+    }
+    
+    // ========== ANALYTICS COLLECTION ==========
+    match /analytics/{document=**} {
+      // Any authenticated user can read analytics
+      allow read: if isAuthenticated();
+      allow write: if false;  // Only backend Cloud Functions
+    }
+    
+    // ========== DEFAULT: DENY ALL ==========
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

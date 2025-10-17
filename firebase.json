@@ -1,0 +1,25 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tasktrackr-f106e",
+          "appId": "1:609949484977:android:629c9ad9fa60602c781f90",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tasktrackr-f106e",
+          "configurations": {
+            "android": "1:609949484977:android:629c9ad9fa60602c781f90",
+            "ios": "1:609949484977:ios:91e6837356954c1a781f90"
+          }
+        }
+      }
+    }
+  }
+}
