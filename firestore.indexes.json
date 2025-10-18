@@ -1,0 +1,45 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "areas",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "isActive",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "name",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "Ascending"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "areas",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "isActive",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "assignedAgentIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "name",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "Ascending"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

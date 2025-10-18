@@ -20,6 +20,16 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 import 'core/network/network_info.dart' as _i75;
 import 'core/network/network_info_impl.dart' as _i973;
 import 'database/database.dart' as _i565;
+import 'features/areas/data/datasources/area_remote_data_source.dart' as _i331;
+import 'features/areas/data/repositories/area_repository_impl.dart' as _i90;
+import 'features/areas/domain/repositories/area_repository.dart' as _i477;
+import 'features/areas/domain/usecases/check_location_in_area.dart' as _i786;
+import 'features/areas/domain/usecases/create_area.dart' as _i13;
+import 'features/areas/domain/usecases/delete_area.dart' as _i446;
+import 'features/areas/domain/usecases/get_area_by_id.dart' as _i973;
+import 'features/areas/domain/usecases/get_areas.dart' as _i780;
+import 'features/areas/domain/usecases/update_area.dart' as _i669;
+import 'features/areas/presentation/bloc/area_bloc.dart' as _i508;
 import 'features/auth/data/datasources/auth_local_datasource.dart' as _i1043;
 import 'features/auth/data/datasources/auth_remote_datasource.dart' as _i588;
 import 'features/auth/data/repositories/auth_repository_impl.dart' as _i111;
@@ -30,6 +40,16 @@ import 'features/auth/domain/usecases/sign_in_with_email.dart' as _i509;
 import 'features/auth/domain/usecases/sign_in_with_google.dart' as _i648;
 import 'features/auth/domain/usecases/sign_out.dart' as _i872;
 import 'features/auth/presentation/bloc/auth_bloc.dart' as _i363;
+import 'features/location/data/datasources/location_datasource.dart' as _i942;
+import 'features/location/data/repositories/location_repository_impl.dart'
+    as _i1061;
+import 'features/location/domain/repositories/location_repository.dart' as _i55;
+import 'features/location/domain/usecases/calculate_distance.dart' as _i406;
+import 'features/location/domain/usecases/get_current_location.dart' as _i858;
+import 'features/location/domain/usecases/request_location_permission.dart'
+    as _i460;
+import 'features/location/domain/usecases/validate_proximity.dart' as _i622;
+import 'features/location/presentation/bloc/location_bloc.dart' as _i738;
 import 'features/tasks/data/datasources/task_local_datasource.dart' as _i361;
 import 'features/tasks/data/datasources/task_remote_datasource.dart' as _i403;
 import 'features/tasks/data/repositories/task_repository_impl.dart' as _i969;
@@ -38,8 +58,10 @@ import 'features/tasks/domain/usecases/check_in_task.dart' as _i754;
 import 'features/tasks/domain/usecases/complete_task.dart' as _i202;
 import 'features/tasks/domain/usecases/create_task.dart' as _i483;
 import 'features/tasks/domain/usecases/delete_task.dart' as _i335;
+import 'features/tasks/domain/usecases/filter_tasks.dart' as _i690;
 import 'features/tasks/domain/usecases/get_task_by_id.dart' as _i869;
 import 'features/tasks/domain/usecases/get_tasks.dart' as _i441;
+import 'features/tasks/domain/usecases/search_tasks.dart' as _i175;
 import 'features/tasks/domain/usecases/update_task.dart' as _i184;
 import 'features/tasks/presentation/bloc/task_bloc.dart' as _i1006;
 import 'injection_container.dart' as _i809;
@@ -68,6 +90,10 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i558.FlutterSecureStorage>(
         () => registerModule.secureStorage);
+    gh.lazySingleton<_i942.LocationDataSource>(
+        () => _i942.LocationDataSourceImpl());
+    gh.lazySingleton<_i55.LocationRepository>(
+        () => _i1061.LocationRepositoryImpl(gh<_i942.LocationDataSource>()));
     gh.lazySingleton<_i403.TaskRemoteDataSource>(
         () => _i403.TaskRemoteDataSourceImpl(
               gh<_i974.FirebaseFirestore>(),
@@ -77,12 +103,25 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i973.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i1043.AuthLocalDataSource>(
         () => _i1043.AuthLocalDataSourceImpl(gh<_i558.FlutterSecureStorage>()));
+    gh.factory<_i406.CalculateDistance>(
+        () => _i406.CalculateDistance(gh<_i55.LocationRepository>()));
+    gh.factory<_i858.GetCurrentLocation>(
+        () => _i858.GetCurrentLocation(gh<_i55.LocationRepository>()));
+    gh.factory<_i460.RequestLocationPermission>(
+        () => _i460.RequestLocationPermission(gh<_i55.LocationRepository>()));
+    gh.factory<_i622.ValidateProximity>(
+        () => _i622.ValidateProximity(gh<_i55.LocationRepository>()));
     gh.lazySingleton<_i588.AuthRemoteDataSource>(
         () => _i588.AuthRemoteDataSourceImpl(
               firebaseAuth: gh<_i59.FirebaseAuth>(),
               firestore: gh<_i974.FirebaseFirestore>(),
               googleSignIn: gh<_i116.GoogleSignIn>(),
             ));
+    gh.lazySingleton<_i331.AreaRemoteDataSource>(() =>
+        _i331.AreaRemoteDataSourceImpl(
+            firestore: gh<_i974.FirebaseFirestore>()));
+    gh.lazySingleton<_i477.AreaRepository>(() => _i90.AreaRepositoryImpl(
+        remoteDataSource: gh<_i331.AreaRemoteDataSource>()));
     gh.lazySingleton<_i361.TaskLocalDataSource>(
         () => _i361.TaskLocalDataSourceImpl(gh<_i565.AppDatabase>()));
     gh.lazySingleton<_i1015.AuthRepository>(() => _i111.AuthRepositoryImpl(
@@ -93,6 +132,24 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i356.TaskRepository>(() => _i969.TaskRepositoryImpl(
           remoteDataSource: gh<_i403.TaskRemoteDataSource>(),
           localDataSource: gh<_i361.TaskLocalDataSource>(),
+        ));
+    gh.factory<_i786.CheckLocationInArea>(
+        () => _i786.CheckLocationInArea(gh<_i477.AreaRepository>()));
+    gh.factory<_i13.CreateArea>(
+        () => _i13.CreateArea(gh<_i477.AreaRepository>()));
+    gh.factory<_i446.DeleteArea>(
+        () => _i446.DeleteArea(gh<_i477.AreaRepository>()));
+    gh.factory<_i780.GetAreas>(
+        () => _i780.GetAreas(gh<_i477.AreaRepository>()));
+    gh.factory<_i973.GetAreaById>(
+        () => _i973.GetAreaById(gh<_i477.AreaRepository>()));
+    gh.factory<_i669.UpdateArea>(
+        () => _i669.UpdateArea(gh<_i477.AreaRepository>()));
+    gh.factory<_i738.LocationBloc>(() => _i738.LocationBloc(
+          getCurrentLocation: gh<_i858.GetCurrentLocation>(),
+          calculateDistance: gh<_i406.CalculateDistance>(),
+          requestLocationPermission: gh<_i460.RequestLocationPermission>(),
+          repository: gh<_i55.LocationRepository>(),
         ));
     gh.lazySingleton<_i818.CheckAuthStatus>(
         () => _i818.CheckAuthStatus(gh<_i1015.AuthRepository>()));
@@ -112,12 +169,24 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i483.CreateTask(gh<_i356.TaskRepository>()));
     gh.factory<_i335.DeleteTask>(
         () => _i335.DeleteTask(gh<_i356.TaskRepository>()));
+    gh.factory<_i690.FilterTasks>(
+        () => _i690.FilterTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i441.GetTasks>(
         () => _i441.GetTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i869.GetTaskById>(
         () => _i869.GetTaskById(gh<_i356.TaskRepository>()));
+    gh.factory<_i175.SearchTasks>(
+        () => _i175.SearchTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i184.UpdateTask>(
         () => _i184.UpdateTask(gh<_i356.TaskRepository>()));
+    gh.factory<_i508.AreaBloc>(() => _i508.AreaBloc(
+          getAreas: gh<_i780.GetAreas>(),
+          getAreaById: gh<_i973.GetAreaById>(),
+          createArea: gh<_i13.CreateArea>(),
+          updateArea: gh<_i669.UpdateArea>(),
+          deleteArea: gh<_i446.DeleteArea>(),
+          checkLocationInArea: gh<_i786.CheckLocationInArea>(),
+        ));
     gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
           signInWithGoogle: gh<_i648.SignInWithGoogle>(),
           signInWithEmail: gh<_i509.SignInWithEmail>(),

@@ -6,6 +6,7 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/profile_page.dart';
+import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/tasks/presentation/pages/task_list_page.dart';
 import '../../features/tasks/presentation/pages/task_detail_page.dart';
 import '../../features/tasks/presentation/pages/task_form_page.dart';
@@ -32,9 +33,9 @@ class AppRouter {
         return RouteNames.login;
       }
 
-      // If authenticated and on login/splash, redirect to task list
+      // If authenticated and on login/splash, redirect to home
       if (isAuthenticated && (isOnLoginPage || isOnSplashPage)) {
-        return RouteNames.taskList;
+        return RouteNames.home;
       }
 
       return null; // No redirect needed
@@ -47,6 +48,10 @@ class AppRouter {
       GoRoute(
         path: RouteNames.login,
         builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: RouteNames.home,
+        builder: (context, state) => const HomePage(),
       ),
       GoRoute(
         path: RouteNames.taskList,

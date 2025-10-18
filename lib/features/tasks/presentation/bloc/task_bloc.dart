@@ -76,8 +76,12 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     result.fold(
       (failure) => emit(TaskError(failure.message)),
       (allTasks) {
-        final filteredTasks =
-            allTasks.where((task) => task.status == event.status).toList();
+        // Convert status string to TaskStatus enum for comparison
+        final filteredTasks = allTasks
+            .where((task) =>
+                task.status.value == event.status ||
+                task.status.toString().split('.').last == event.status)
+            .toList();
 
         if (filteredTasks.isEmpty) {
           emit(const TasksEmpty());

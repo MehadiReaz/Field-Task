@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
+import 'package:rxdart/rxdart.dart';
 import '../models/task_model.dart';
 
 abstract class TaskRemoteDataSource {
@@ -39,15 +40,33 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         throw const FirestoreException('User not authenticated');
       }
 
-      // Query tasks assigned to or created by the current user
-      final snapshot = await firestore
+      // Query tasks assigned to the current user
+      // Note: Using 'assignedTo' not 'assignedToId' to match Firestore field names
+      final assignedSnapshot = await firestore
           .collection('tasks')
-          .where('assignedToId', isEqualTo: currentUser.uid)
+          .where('assignedTo', isEqualTo: currentUser.uid)
           .get();
 
-      return snapshot.docs
-          .map((doc) => TaskModel.fromFirestore(doc.data()))
-          .toList();
+      // Query tasks created by the current user
+      final createdSnapshot = await firestore
+          .collection('tasks')
+          .where('createdBy', isEqualTo: currentUser.uid)
+          .get();
+
+      // Combine and deduplicate tasks
+      final tasksMap = <String, TaskModel>{};
+
+      for (final doc in assignedSnapshot.docs) {
+        final task = TaskModel.fromFirestore(doc.data());
+        tasksMap[task.id] = task;
+      }
+
+      for (final doc in createdSnapshot.docs) {
+        final task = TaskModel.fromFirestore(doc.data());
+        tasksMap[task.id] = task;
+      }
+
+      return tasksMap.values.toList();
     } catch (e) {
       throw FirestoreException('Failed to fetch tasks: $e');
     }
@@ -231,16 +250,38 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       return Stream.error(const FirestoreException('User not authenticated'));
     }
 
-    // Watch tasks assigned to or created by the current user
-    return firestore
+    // Watch tasks assigned to the current user
+    // Note: Using 'assignedTo' not 'assignedToId' to match Firestore field names
+    final assignedStream = firestore
         .collection('tasks')
-        .where('assignedToId', isEqualTo: currentUser.uid)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => TaskModel.fromFirestore(doc.data()))
-              .toList(),
-        );
+        .where('assignedTo', isEqualTo: currentUser.uid)
+        .snapshots();
+
+    // Watch tasks created by the current user
+    final createdStream = firestore
+        .collection('tasks')
+        .where('createdBy', isEqualTo: currentUser.uid)
+        .snapshots();
+
+    // Combine both streams
+    return Rx.combineLatest2(assignedStream, createdStream,
+        (assigned, created) {
+      final tasksMap = <String, TaskModel>{};
+
+      // Add assigned tasks
+      for (final doc in assigned.docs) {
+        final task = TaskModel.fromFirestore(doc.data());
+        tasksMap[task.id] = task;
+      }
+
+      // Add created tasks (overwrites if same ID)
+      for (final doc in created.docs) {
+        final task = TaskModel.fromFirestore(doc.data());
+        tasksMap[task.id] = task;
+      }
+
+      return tasksMap.values.toList();
+    });
   }
 
   @override

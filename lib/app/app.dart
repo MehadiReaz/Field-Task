@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/location/presentation/bloc/location_bloc.dart';
 import '../injection_container.dart';
 import 'routes/app_router.dart';
 import 'theme/app_theme.dart';
@@ -16,8 +17,10 @@ class FieldTaskApp extends StatelessWidget {
         BlocProvider(
           create: (_) => getIt<AuthBloc>()..add(CheckAuthStatusEvent()),
         ),
+        BlocProvider(
+          create: (_) => getIt<LocationBloc>(),
+        ),
         // TODO: Add SyncBloc when sync feature is implemented
-        // TODO: Add LocationBloc when location feature is implemented
       ],
       child: MaterialApp.router(
         title: 'FieldTask Pro',

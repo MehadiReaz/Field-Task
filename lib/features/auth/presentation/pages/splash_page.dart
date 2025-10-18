@@ -27,7 +27,7 @@ class _SplashPageState extends State<SplashPage> {
       listener: (context, state) {
         if (state is AuthAuthenticatedState) {
           // User is authenticated, navigate to home
-          context.go(RouteNames.taskList);
+          context.go(RouteNames.home);
         } else if (state is AuthUnauthenticatedState) {
           // User is not authenticated, navigate to login
           context.go(RouteNames.login);

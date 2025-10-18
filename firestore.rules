@@ -31,10 +31,6 @@ service cloud.firestore {
     }
     
     function isManager() {
-      return userExists() && getUserRole() in ['admin', 'manager'];
-    }
-    
-    function isAgent() {
       return userExists() && getUserRole() in ['admin', 'manager', 'agent'];
     }
     
@@ -58,27 +54,28 @@ service cloud.firestore {
     match /tasks/{taskId} {
       // Read: Any authenticated user can read tasks they're related to
       allow read: if isAuthenticated() && (
-        resource.data.assignedToId == request.auth.uid || 
-        resource.data.createdById == request.auth.uid
+        resource.data.assignedTo == request.auth.uid || 
+        resource.data.createdBy == request.auth.uid
       );
       
-      // List queries: Allow authenticated users to query tasks
-      // The query must filter by assignedToId or createdById
+      // List queries: Allow authenticated users to query their own tasks
+      // This allows querying by assignedTo or createdBy
       allow list: if isAuthenticated();
       
       // Create: Any authenticated user can create tasks
+      // Validates that createdBy field matches authenticated user
       allow create: if isAuthenticated() && 
-        request.resource.data.createdById == request.auth.uid;
+        request.resource.data.createdBy == request.auth.uid;
       
       // Update: Users can update tasks they created or are assigned to
       allow update: if isAuthenticated() && (
-        resource.data.assignedToId == request.auth.uid ||
-        resource.data.createdById == request.auth.uid
+        resource.data.assignedTo == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid
       );
       
       // Delete: Users can delete tasks they created
       allow delete: if isAuthenticated() && 
-        resource.data.createdById == request.auth.uid;
+        resource.data.createdBy == request.auth.uid;
       
       // ===== CHECK-INS SUBCOLLECTION =====
       match /checkIns/{checkinId} {
@@ -127,6 +124,22 @@ service cloud.firestore {
       // Any authenticated user can read analytics
       allow read: if isAuthenticated();
       allow write: if false;  // Only backend Cloud Functions
+    }
+    
+    // ========== AREAS COLLECTION ==========
+    match /areas/{areaId} {
+      // Any authenticated user can read areas
+      allow read: if isAuthenticated();
+      
+      // Only admins and managers can create areas
+      allow create: if isManager() && 
+        request.resource.data.createdById == request.auth.uid;
+      
+      // Only admins and managers can update areas
+      allow update: if isManager();
+      
+      // Only admins can delete areas (actually soft delete by setting isActive=false)
+      allow delete: if isAdmin();
     }
     
     // ========== DEFAULT: DENY ALL ==========

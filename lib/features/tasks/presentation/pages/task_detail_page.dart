@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/enums/task_status.dart';
 import '../../../../core/enums/task_priority.dart';
+import '../../../../core/utils/location_utils.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
+import 'task_form_page.dart';
 
 class TaskDetailPage extends StatelessWidget {
   final String taskId;
@@ -31,6 +34,23 @@ class TaskDetailView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Task Details'),
+        actions: [
+          BlocBuilder<TaskBloc, TaskState>(
+            builder: (context, state) {
+              if (state is TaskLoaded) {
+                // Only show edit for pending tasks
+                if (state.task.status == TaskStatus.pending) {
+                  return IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () => _navigateToEditTask(context, state.task),
+                    tooltip: 'Edit Task',
+                  );
+                }
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
       ),
       body: BlocConsumer<TaskBloc, TaskState>(
         listener: (context, state) {
@@ -454,37 +474,71 @@ class TaskDetailView extends StatelessWidget {
     );
   }
 
-  void _showCheckInDialog(BuildContext context, Task task) {
-    // TODO: Get actual GPS location
-    final double mockLatitude = 40.7128;
-    final double mockLongitude = -74.0060;
+  void _showCheckInDialog(BuildContext context, Task task) async {
+    // Get actual GPS location
+    try {
+      final position = await _getCurrentLocation();
+      if (position == null) {
+        if (context.mounted) {
+          _showLocationError(context, 'Unable to get current location');
+        }
+        return;
+      }
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Check In'),
-        content: const Text('Are you sure you want to check in to this task?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+      // Calculate distance from task location
+      final distance = _calculateDistance(
+        position.latitude,
+        position.longitude,
+        task.latitude,
+        task.longitude,
+      );
+
+      // Check if within range (100m)
+      if (distance > 100) {
+        if (context.mounted) {
+          _showLocationError(
+            context,
+            'You are ${distance.toStringAsFixed(0)}m away from the task location. You must be within 100m to check in.',
+          );
+        }
+        return;
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Check In'),
+            content: Text(
+              'You are ${distance.toStringAsFixed(0)}m from the task location.\n\nAre you sure you want to check in to this task?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<TaskBloc>().add(CheckInTaskEvent(
+                        taskId: task.id,
+                        latitude: position.latitude,
+                        longitude: position.longitude,
+                        photoUrl: null,
+                        notes: 'Checked in via app',
+                      ));
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Check In'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<TaskBloc>().add(CheckInTaskEvent(
-                    taskId: task.id,
-                    latitude: mockLatitude,
-                    longitude: mockLongitude,
-                    photoUrl: null,
-                    notes: 'Checked in via app',
-                  ));
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Check In'),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        _showLocationError(context, 'Error getting location: $e');
+      }
+    }
   }
 
   void _showCompleteDialog(BuildContext context, Task task) {
@@ -530,5 +584,62 @@ class TaskDetailView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Get current GPS location
+  Future<Position?> _getCurrentLocation() async {
+    try {
+      return await LocationUtils.getCurrentPosition();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Calculate distance between two points in meters
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    return LocationUtils.calculateDistance(
+      startLatitude: lat1,
+      startLongitude: lon1,
+      endLatitude: lat2,
+      endLongitude: lon2,
+    );
+  }
+
+  void _showLocationError(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _navigateToEditTask(BuildContext context, Task task) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TaskFormPage(
+          taskId: task.id,
+          task: task,
+        ),
+      ),
+    );
+
+    // Reload task if it was updated
+    if (result == true && context.mounted) {
+      context.read<TaskBloc>().add(LoadTaskByIdEvent(task.id));
+    }
   }
 }

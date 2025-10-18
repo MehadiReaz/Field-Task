@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../../../core/enums/task_status.dart';
 import '../../../../core/enums/task_priority.dart';
+import '../../../../core/utils/date_time_utils.dart';
 import '../../domain/entities/task.dart';
+import 'task_status_badge.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
@@ -89,7 +89,7 @@ class TaskCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildStatusBadge(context),
+                  TaskStatusBadge(status: task.status, compact: true),
                   Row(
                     children: [
                       Icon(
@@ -99,7 +99,7 @@ class TaskCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _formatDueDate(task.dueDateTime),
+                        DateTimeUtils.formatTaskDueDate(task.dueDateTime),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: _getDueDateColor(),
                             ),
@@ -110,51 +110,6 @@ class TaskCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BuildContext context) {
-    Color backgroundColor;
-    Color textColor;
-    String label;
-
-    switch (task.status) {
-      case TaskStatus.pending:
-        backgroundColor = Colors.orange[100]!;
-        textColor = Colors.orange[900]!;
-        label = 'Pending';
-        break;
-      case TaskStatus.checkedIn:
-        backgroundColor = Colors.blue[100]!;
-        textColor = Colors.blue[900]!;
-        label = 'Checked In';
-        break;
-      case TaskStatus.completed:
-        backgroundColor = Colors.green[100]!;
-        textColor = Colors.green[900]!;
-        label = 'Completed';
-        break;
-      case TaskStatus.cancelled:
-        backgroundColor = Colors.red[100]!;
-        textColor = Colors.red[900]!;
-        label = 'Cancelled';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -187,23 +142,6 @@ class TaskCard extends StatelessWidget {
       ),
       child: Icon(icon, size: 18, color: color),
     );
-  }
-
-  String _formatDueDate(DateTime dueDate) {
-    final now = DateTime.now();
-    final difference = dueDate.difference(now);
-
-    if (difference.inDays == 0) {
-      return 'Today ${DateFormat('HH:mm').format(dueDate)}';
-    } else if (difference.inDays == 1) {
-      return 'Tomorrow';
-    } else if (difference.inDays < 0) {
-      return 'Overdue';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days';
-    } else {
-      return DateFormat('MMM dd').format(dueDate);
-    }
   }
 
   Color _getDueDateColor() {

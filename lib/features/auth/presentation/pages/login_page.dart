@@ -32,11 +32,11 @@ class _LoginPageState extends State<LoginPage> {
   void _handleEmailSignIn() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-        SignInWithEmailEvent(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ),
-      );
+            SignInWithEmailEvent(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+            ),
+          );
     }
   }
 
@@ -57,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticatedState) {
-            context.go(RouteNames.taskList);
+            context.go(RouteNames.home);
           }
         },
         builder: (context, state) {
@@ -149,9 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                           validator: Validators.validateEmail,
                           enabled: !isLoading,
                         ),
-
                         const SizedBox(height: 16),
-
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -174,22 +172,20 @@ class _LoginPageState extends State<LoginPage> {
                           validator: Validators.validatePassword,
                           enabled: !isLoading,
                         ),
-
                         const SizedBox(height: 24),
-
                         ElevatedButton(
                           onPressed: isLoading ? null : _handleEmailSignIn,
                           child: isLoading
                               ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
                               : const Text('Sign In'),
                         ),
                       ],

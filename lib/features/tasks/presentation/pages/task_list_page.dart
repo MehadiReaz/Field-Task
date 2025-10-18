@@ -7,6 +7,7 @@ import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
 import '../widgets/task_card.dart';
 import 'task_detail_page.dart';
+import 'task_form_page.dart';
 
 class TaskListPage extends StatelessWidget {
   const TaskListPage({super.key});
@@ -134,15 +135,9 @@ class _TaskListViewState extends State<TaskListView> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to create task page (managers only)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Create task feature coming soon'),
-            ),
-          );
-        },
+        onPressed: () => _navigateToCreateTask(context),
         child: const Icon(Icons.add),
+        tooltip: 'Create New Task',
       ),
     );
   }
@@ -162,5 +157,19 @@ class _TaskListViewState extends State<TaskListView> {
         builder: (context) => TaskDetailPage(taskId: task.id),
       ),
     );
+  }
+
+  Future<void> _navigateToCreateTask(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TaskFormPage(),
+      ),
+    );
+
+    // Refresh task list if a task was created
+    if (result == true && mounted) {
+      context.read<TaskBloc>().add(const RefreshTasksEvent());
+    }
   }
 }
