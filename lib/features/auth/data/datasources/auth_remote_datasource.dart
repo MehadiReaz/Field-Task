@@ -12,6 +12,7 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> signInWithEmail(String email, String password);
   Future<void> signOut();
   Future<UserModel> getCurrentUser();
+  Future<UserModel> updateUserArea(String userId, String areaId);
   Stream<UserModel?> get authStateChanges;
 }
 
@@ -150,6 +151,42 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       return UserModel.fromFirestore(userDoc.data()!);
     } catch (e) {
       throw AuthException('Failed to get current user: $e');
+    }
+  }
+
+  @override
+  Future<UserModel> updateUserArea(String userId, String areaId) async {
+    try {
+      // Fetch the area name from the areas collection
+      String areaName = areaId;
+      try {
+        final areaDoc = await firestore.collection('areas').doc(areaId).get();
+        if (areaDoc.exists) {
+          areaName = areaDoc.data()?['name'] ?? areaId;
+        }
+      } catch (e) {
+        print('Warning: Could not fetch area name: $e');
+        // Continue with just the ID if we can't get the name
+      }
+
+      final userDoc = firestore.collection('users').doc(userId);
+
+      // Update both selectedAreaId and selectedAreaName
+      await userDoc.update({
+        'selectedAreaId': areaId,
+        'selectedAreaName': areaName,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // Fetch and return the updated user
+      final updatedDoc = await userDoc.get();
+      if (!updatedDoc.exists) {
+        throw const AuthException('User not found');
+      }
+
+      return UserModel.fromFirestore(updatedDoc.data()!);
+    } catch (e) {
+      throw AuthException('Failed to update user area: $e');
     }
   }
 

@@ -30,6 +30,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final user = await remoteDataSource.signInWithGoogle();
       await localDataSource.cacheUser(user);
+      // Save auth token (user ID as token)
+      await localDataSource.saveAuthToken(user.id);
       return Right(user);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
@@ -50,6 +52,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final user = await remoteDataSource.signInWithEmail(email, password);
       await localDataSource.cacheUser(user);
+      // Save auth token (user ID as token)
+      await localDataSource.saveAuthToken(user.id);
       return Right(user);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
@@ -104,6 +108,24 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(token != null && cachedUser != null);
     } catch (e) {
       return const Right(false);
+    }
+  }
+
+  @override
+  Future<Either<Failure, User>> updateUserArea(
+      String userId, String areaId) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final user = await remoteDataSource.updateUserArea(userId, areaId);
+      await localDataSource.cacheUser(user);
+      return Right(user);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
+    } catch (e) {
+      return Left(AuthFailure('Unexpected error: $e'));
     }
   }
 

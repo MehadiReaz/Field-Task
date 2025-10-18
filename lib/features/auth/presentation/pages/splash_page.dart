@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../injection_container.dart';
+import '../../../areas/presentation/bloc/area_bloc.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/area_selection_dialog.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -24,12 +27,56 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is AuthAuthenticatedState) {
-          // User is authenticated, navigate to home
-          context.go(RouteNames.home);
+          // User is authenticated
+          print(
+              '🔍 Splash: User authenticated. SelectedAreaId: ${state.user.selectedAreaId}');
+
+          // Check if user has selected an area
+          if (state.user.selectedAreaId == null) {
+            print('⚠️ Splash: No area selected, showing dialog');
+
+            // Wait a bit to ensure the widget tree is built
+            await Future.delayed(const Duration(milliseconds: 300));
+
+            if (!mounted) return;
+
+            // Show area selection dialog
+            print('📱 Splash: Showing area selection dialog');
+            final result = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) => BlocProvider(
+                create: (context) => getIt<AreaBloc>(),
+                child: const AreaSelectionDialog(isRequired: true),
+              ),
+            );
+
+            print('✅ Splash: Dialog result: $result');
+
+            if (result == true && mounted) {
+              // Area selected, proceed to home
+              print('✅ Splash: Area selected, navigating to home');
+              context.go(RouteNames.home);
+            } else if (mounted) {
+              // If dialog was somehow dismissed without selection, show error
+              print('❌ Splash: Dialog dismissed without selection');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You must select an area to continue'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } else {
+            // User has area selected, navigate to home
+            print('✅ Splash: User has area, navigating to home');
+            context.go(RouteNames.home);
+          }
         } else if (state is AuthUnauthenticatedState) {
           // User is not authenticated, navigate to login
+          print('🔒 Splash: User not authenticated, navigating to login');
           context.go(RouteNames.login);
         }
         // If Loading or Initial, stay on splash screen

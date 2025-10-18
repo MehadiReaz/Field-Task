@@ -40,17 +40,29 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         throw const FirestoreException('User not authenticated');
       }
 
-      // Query tasks assigned to the current user
-      // Note: Using 'assignedTo' not 'assignedToId' to match Firestore field names
+      // Get user's selected area
+      final userDoc =
+          await firestore.collection('users').doc(currentUser.uid).get();
+      final selectedAreaId = userDoc.data()?['selectedAreaId'] as String?;
+
+      // If no area selected, return empty list
+      if (selectedAreaId == null) {
+        print('⚠️ User has no selected area');
+        return [];
+      }
+
+      // Query tasks assigned to the current user AND in their selected area
       final assignedSnapshot = await firestore
           .collection('tasks')
           .where('assignedTo', isEqualTo: currentUser.uid)
+          .where('areaId', isEqualTo: selectedAreaId)
           .get();
 
-      // Query tasks created by the current user
+      // Query tasks created by the current user AND in their selected area
       final createdSnapshot = await firestore
           .collection('tasks')
           .where('createdBy', isEqualTo: currentUser.uid)
+          .where('areaId', isEqualTo: selectedAreaId)
           .get();
 
       // Combine and deduplicate tasks
@@ -66,6 +78,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         tasksMap[task.id] = task;
       }
 
+      print('✅ Fetched ${tasksMap.length} tasks for area: $selectedAreaId');
       return tasksMap.values.toList();
     } catch (e) {
       throw FirestoreException('Failed to fetch tasks: $e');
@@ -99,6 +112,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
+        areaId: task.areaId, // Include areaId
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
@@ -168,6 +182,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         latitude: latitude,
         longitude: longitude,
         address: task.address,
+        areaId: task.areaId, // Preserve areaId
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
@@ -217,6 +232,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
+        areaId: task.areaId, // Preserve areaId
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
@@ -250,37 +266,54 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       return Stream.error(const FirestoreException('User not authenticated'));
     }
 
-    // Watch tasks assigned to the current user
-    // Note: Using 'assignedTo' not 'assignedToId' to match Firestore field names
-    final assignedStream = firestore
-        .collection('tasks')
-        .where('assignedTo', isEqualTo: currentUser.uid)
-        .snapshots();
+    // Get user's selected area and watch for changes
+    return firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .snapshots()
+        .asyncExpand((userDoc) {
+      final selectedAreaId = userDoc.data()?['selectedAreaId'] as String?;
 
-    // Watch tasks created by the current user
-    final createdStream = firestore
-        .collection('tasks')
-        .where('createdBy', isEqualTo: currentUser.uid)
-        .snapshots();
-
-    // Combine both streams
-    return Rx.combineLatest2(assignedStream, createdStream,
-        (assigned, created) {
-      final tasksMap = <String, TaskModel>{};
-
-      // Add assigned tasks
-      for (final doc in assigned.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
+      // If no area selected, return empty stream
+      if (selectedAreaId == null) {
+        print('⚠️ User has no selected area for watching tasks');
+        return Stream.value(<TaskModel>[]);
       }
 
-      // Add created tasks (overwrites if same ID)
-      for (final doc in created.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-      }
+      // Watch tasks assigned to the current user AND in their selected area
+      final assignedStream = firestore
+          .collection('tasks')
+          .where('assignedTo', isEqualTo: currentUser.uid)
+          .where('areaId', isEqualTo: selectedAreaId)
+          .snapshots();
 
-      return tasksMap.values.toList();
+      // Watch tasks created by the current user AND in their selected area
+      final createdStream = firestore
+          .collection('tasks')
+          .where('createdBy', isEqualTo: currentUser.uid)
+          .where('areaId', isEqualTo: selectedAreaId)
+          .snapshots();
+
+      // Combine both streams
+      return Rx.combineLatest2(assignedStream, createdStream,
+          (assigned, created) {
+        final tasksMap = <String, TaskModel>{};
+
+        // Add assigned tasks
+        for (final doc in assigned.docs) {
+          final task = TaskModel.fromFirestore(doc.data());
+          tasksMap[task.id] = task;
+        }
+
+        // Add created tasks (overwrites if same ID)
+        for (final doc in created.docs) {
+          final task = TaskModel.fromFirestore(doc.data());
+          tasksMap[task.id] = task;
+        }
+
+        print('✅ Watching ${tasksMap.length} tasks for area: $selectedAreaId');
+        return tasksMap.values.toList();
+      });
     });
   }
 

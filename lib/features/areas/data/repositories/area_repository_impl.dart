@@ -30,7 +30,8 @@ class AreaRepositoryImpl implements AreaRepository {
       final areas = await remoteDataSource.getAreas();
       return Right(areas);
     } catch (e) {
-      return Left(ServerFailure());
+      print('Error fetching areas: $e');
+      return Left(ServerFailure('Failed to fetch areas: $e'));
     }
   }
 

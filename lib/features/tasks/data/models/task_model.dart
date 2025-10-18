@@ -1,6 +1,7 @@
 import '../../../../core/enums/task_status.dart';
 import '../../../../core/enums/task_priority.dart';
 import '../../../../core/enums/sync_status.dart';
+import '../../../../core/utils/timestamp_helper.dart';
 import '../../domain/entities/task.dart' as entity;
 
 class TaskModel extends entity.Task {
@@ -14,6 +15,7 @@ class TaskModel extends entity.Task {
     required super.latitude,
     required super.longitude,
     super.address,
+    super.areaId,
     required super.assignedToId,
     required super.assignedToName,
     required super.createdById,
@@ -37,23 +39,24 @@ class TaskModel extends entity.Task {
       id: data['id'] as String,
       title: data['title'] as String,
       description: data['description'] as String? ?? '',
-      dueDateTime: DateTime.parse(data['dueDate'] as String),
+      dueDateTime: TimestampHelper.parseDateTime(data['dueDate']),
       status: TaskStatus.fromString(data['status'] as String),
       priority: TaskPriority.fromString(data['priority'] as String),
       latitude: (data['locationLat'] as num).toDouble(),
       longitude: (data['locationLng'] as num).toDouble(),
       address: data['locationAddress'] as String?,
+      areaId: data['areaId'] as String?,
       assignedToId: data['assignedTo'] as String,
       assignedToName: data['assignedToName'] as String? ?? '',
       createdById: data['createdBy'] as String,
       createdByName: data['createdByName'] as String? ?? '',
-      createdAt: DateTime.parse(data['createdAt'] as String),
-      updatedAt: DateTime.parse(data['updatedAt'] as String),
+      createdAt: TimestampHelper.parseDateTime(data['createdAt']),
+      updatedAt: TimestampHelper.parseDateTime(data['updatedAt']),
       checkedInAt: data['checkedInAt'] != null
-          ? DateTime.parse(data['checkedInAt'] as String)
+          ? TimestampHelper.parseDateTime(data['checkedInAt'])
           : null,
       completedAt: data['completedAt'] != null
-          ? DateTime.parse(data['completedAt'] as String)
+          ? TimestampHelper.parseDateTime(data['completedAt'])
           : null,
       photoUrls: data['photoUrls'] != null
           ? List<String>.from(data['photoUrls'] as List)
@@ -78,6 +81,7 @@ class TaskModel extends entity.Task {
       'locationLat': latitude,
       'locationLng': longitude,
       'locationAddress': address,
+      'areaId': areaId,
       'assignedTo': assignedToId,
       'assignedToName': assignedToName,
       'createdBy': createdById,
@@ -106,6 +110,7 @@ class TaskModel extends entity.Task {
       latitude: latitude,
       longitude: longitude,
       address: address,
+      areaId: areaId,
       assignedToId: assignedToId,
       assignedToName: assignedToName,
       createdById: createdById,

@@ -57,8 +57,7 @@ class LocationFailure extends Failure {
 }
 
 class LocationPermissionDeniedFailure extends LocationFailure {
-  const LocationPermissionDeniedFailure()
-      : super('Location permission denied');
+  const LocationPermissionDeniedFailure() : super('Location permission denied');
 }
 
 class LocationServiceDisabledFailure extends LocationFailure {
@@ -81,7 +80,8 @@ class NetworkFailure extends SyncFailure {
 }
 
 class ServerFailure extends SyncFailure {
-  const ServerFailure() : super('Server error occurred');
+  const ServerFailure([String message = 'Server error occurred'])
+      : super(message);
 }
 
 // Cache Failures

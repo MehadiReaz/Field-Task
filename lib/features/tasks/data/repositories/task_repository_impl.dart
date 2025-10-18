@@ -23,11 +23,17 @@ class TaskRepositoryImpl implements TaskRepository {
       final tasks = await remoteDataSource.getTasks();
       // Cache locally
       for (final task in tasks) {
-        await localDataSource.saveTask(task);
+        try {
+          await localDataSource.saveTask(task);
+        } catch (e) {
+          // Log but don't fail - local cache is secondary
+          print('⚠️ Warning: Failed to cache task locally: $e');
+        }
       }
       return Right(tasks);
     } catch (e) {
-      return Left(const ServerFailure());
+      print('❌ Error in getTasks: $e');
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -38,7 +44,8 @@ class TaskRepositoryImpl implements TaskRepository {
       await localDataSource.saveTask(task);
       return Right(task);
     } catch (e) {
-      return Left(const ServerFailure());
+      print('❌ Error in getTaskById: $e');
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -55,6 +62,7 @@ class TaskRepositoryImpl implements TaskRepository {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
+        areaId: task.areaId, // Include areaId
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
@@ -71,10 +79,16 @@ class TaskRepositoryImpl implements TaskRepository {
         metadata: task.metadata,
       );
       final createdTask = await remoteDataSource.createTask(taskModel);
-      await localDataSource.saveTask(createdTask);
+      try {
+        await localDataSource.saveTask(createdTask);
+      } catch (e) {
+        // Log but don't fail - local cache is secondary
+        print('⚠️ Warning: Failed to cache task locally: $e');
+      }
       return Right(createdTask);
     } catch (e) {
-      return Left(const TaskCreateFailure());
+      print('❌ Error in createTask: $e');
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -91,6 +105,7 @@ class TaskRepositoryImpl implements TaskRepository {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
+        areaId: task.areaId, // Include areaId
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,

@@ -8,5 +8,6 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> signOut();
   Future<Either<Failure, User>> getCurrentUser();
   Future<Either<Failure, bool>> checkAuthStatus();
+  Future<Either<Failure, User>> updateUserArea(String userId, String areaId);
   Stream<User?> get authStateChanges;
 }

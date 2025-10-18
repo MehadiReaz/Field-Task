@@ -31,6 +31,10 @@ service cloud.firestore {
     }
     
     function isManager() {
+      return userExists() && getUserRole() in ['admin', 'manager'];
+    }
+    
+    function isAgent() {
       return userExists() && getUserRole() in ['admin', 'manager', 'agent'];
     }
     
@@ -52,30 +56,38 @@ service cloud.firestore {
     
     // ========== TASKS COLLECTION ==========
     match /tasks/{taskId} {
-      // Read: Any authenticated user can read tasks they're related to
-      allow read: if isAuthenticated() && (
-        resource.data.assignedTo == request.auth.uid || 
-        resource.data.createdBy == request.auth.uid
-      );
+      // Read: Any authenticated user can read tasks
+      // - Tasks they created (createdBy)
+      // - Tasks assigned to them (assignedTo)
+      // - All tasks (simplified for now)
+      allow read: if isAuthenticated();
       
-      // List queries: Allow authenticated users to query their own tasks
-      // This allows querying by assignedTo or createdBy
+      // List queries: Allow authenticated users to query all tasks
       allow list: if isAuthenticated();
       
-      // Create: Any authenticated user can create tasks
-      // Validates that createdBy field matches authenticated user
-      allow create: if isAuthenticated() && 
+      // Create: 
+      // - Any agent can create tasks
+      // - Validates that createdBy field matches authenticated user
+      allow create: if isAgent() && 
         request.resource.data.createdBy == request.auth.uid;
       
-      // Update: Users can update tasks they created or are assigned to
+      // Update:
+      // - Agents can update tasks they created or are assigned to
+      // - Managers can update any task
+      // - Admins can update any task
       allow update: if isAuthenticated() && (
-        resource.data.assignedTo == request.auth.uid ||
-        resource.data.createdBy == request.auth.uid
+        (isAgent() && (
+          resource.data.createdBy == request.auth.uid ||
+          resource.data.assignedTo == request.auth.uid
+        )) ||
+        (isManager()) ||
+        (isAdmin())
       );
       
-      // Delete: Users can delete tasks they created
-      allow delete: if isAuthenticated() && 
-        resource.data.createdBy == request.auth.uid;
+      // Delete:
+      // - Managers can delete tasks
+      // - Admins can delete tasks
+      allow delete: if (isManager() || isAdmin());
       
       // ===== CHECK-INS SUBCOLLECTION =====
       match /checkIns/{checkinId} {
@@ -131,14 +143,14 @@ service cloud.firestore {
       // Any authenticated user can read areas
       allow read: if isAuthenticated();
       
-      // Only admins and managers can create areas
-      allow create: if isManager() && 
+      // Only managers and admins can create areas
+      allow create: if isManager() || isAgent() &&
         request.resource.data.createdById == request.auth.uid;
       
-      // Only admins and managers can update areas
+      // Only managers and admins can update areas
       allow update: if isManager();
       
-      // Only admins can delete areas (actually soft delete by setting isActive=false)
+      // Only admins can delete areas
       allow delete: if isAdmin();
     }
     

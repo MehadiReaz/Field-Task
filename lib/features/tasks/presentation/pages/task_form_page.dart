@@ -11,7 +11,6 @@ import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
-import '../../../location/presentation/pages/map_selection_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 class TaskFormPage extends StatelessWidget {
@@ -217,27 +216,49 @@ class _TaskFormViewState extends State<TaskFormView> {
 
                   const SizedBox(height: 16),
 
-                  // Location Selector
-                  InkWell(
-                    onTap: isLoading ? null : _selectLocation,
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Location *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                      child: Text(
-                        _selectedAddress ?? 'Tap to select location',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: _selectedAddress == null
-                              ? Colors.grey[600]
-                              : Colors.black,
+                  // Area Display (Read-only - from user's selected area)
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, authState) {
+                      String areaName = 'Loading area...';
+                      if (authState is AuthAuthenticatedState) {
+                        areaName = authState.user.selectedAreaName ??
+                            'No area selected';
+                      }
+
+                      return InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Working Area',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_city),
+                          helperText:
+                              'You are working within your selected area',
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green[600],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  areaName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
@@ -297,38 +318,8 @@ class _TaskFormViewState extends State<TaskFormView> {
     }
   }
 
-  Future<void> _selectLocation() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MapSelectionPage(
-          initialLat: _selectedLatitude,
-          initialLng: _selectedLongitude,
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        _selectedLatitude = result['latitude'] as double?;
-        _selectedLongitude = result['longitude'] as double?;
-        _selectedAddress = result['address'] as String?;
-      });
-    }
-  }
-
   void _saveTask() {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_selectedLatitude == null || _selectedLongitude == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a location'),
-          backgroundColor: Colors.red,
-        ),
-      );
       return;
     }
 
@@ -344,6 +335,24 @@ class _TaskFormViewState extends State<TaskFormView> {
     }
 
     final user = authState.user;
+
+    // Check that user has selected an area
+    if (user.selectedAreaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an area before creating a task'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Use area center as default location
+    // In a real scenario, you would fetch area details to get center coordinates
+    // For now, use placeholder coordinates
+    double latitude = _selectedLatitude ?? 0.0;
+    double longitude = _selectedLongitude ?? 0.0;
+
     final dueDateTime = DateTime(
       _selectedDueDate.year,
       _selectedDueDate.month,
@@ -359,9 +368,10 @@ class _TaskFormViewState extends State<TaskFormView> {
       dueDateTime: dueDateTime,
       status: widget.existingTask?.status ?? TaskStatus.pending,
       priority: _selectedPriority,
-      latitude: _selectedLatitude!,
-      longitude: _selectedLongitude!,
+      latitude: latitude,
+      longitude: longitude,
       address: _selectedAddress,
+      areaId: user.selectedAreaId, // Set the user's selected area
       assignedToId: user.id,
       assignedToName: user.displayName,
       createdById: user.id,

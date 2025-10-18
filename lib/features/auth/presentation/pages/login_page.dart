@@ -6,7 +6,10 @@ import '../../../../app/routes/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../injection_container.dart';
+import '../../../areas/presentation/bloc/area_bloc.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/area_selection_dialog.dart';
 import '../widgets/google_sign_in_button.dart';
 
 class LoginPage extends StatefulWidget {
@@ -48,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocConsumer<AuthBloc, AuthState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is AuthErrorState) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -57,7 +60,52 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticatedState) {
-            context.go(RouteNames.home);
+            print(
+                '🔍 Login: User authenticated. SelectedAreaId: ${state.user.selectedAreaId}');
+
+            // Check if user has selected an area
+            if (state.user.selectedAreaId == null) {
+              print('⚠️ Login: No area selected, showing dialog');
+
+              // Wait a bit to ensure the widget tree is built
+              await Future.delayed(const Duration(milliseconds: 300));
+
+              if (!mounted) return;
+
+              // Show area selection dialog
+              print('📱 Login: Showing area selection dialog');
+              final result = await showDialog<bool>(
+                context: context,
+                barrierDismissible: false,
+                builder: (dialogContext) => BlocProvider(
+                  create: (context) => getIt<AreaBloc>(),
+                  child: const AreaSelectionDialog(isRequired: true),
+                ),
+              );
+
+              print('✅ Login: Dialog result: $result');
+
+              if (result == true && mounted) {
+                // Area selected, refresh user data and proceed to home
+                print(
+                    '✅ Login: Area selected, refreshing user and navigating to home');
+                context.read<AuthBloc>().add(GetCurrentUserEvent());
+                context.go(RouteNames.home);
+              } else if (mounted) {
+                // If dialog was somehow dismissed without selection, show error
+                print('❌ Login: Dialog dismissed without selection');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You must select an area to continue'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            } else {
+              // User has area selected, navigate to home
+              print('✅ Login: User has area, navigating to home');
+              context.go(RouteNames.home);
+            }
           }
         },
         builder: (context, state) {

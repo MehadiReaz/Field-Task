@@ -13,6 +13,7 @@ class Task extends Equatable {
   final double latitude;
   final double longitude;
   final String? address;
+  final String? areaId; // Area this task belongs to
   final String assignedToId;
   final String assignedToName;
   final String createdById;
@@ -39,6 +40,7 @@ class Task extends Equatable {
     required this.latitude,
     required this.longitude,
     this.address,
+    this.areaId,
     required this.assignedToId,
     required this.assignedToName,
     required this.createdById,
@@ -58,31 +60,32 @@ class Task extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    title,
-    description,
-    dueDateTime,
-    status,
-    priority,
-    latitude,
-    longitude,
-    address,
-    assignedToId,
-    assignedToName,
-    createdById,
-    createdByName,
-    createdAt,
-    updatedAt,
-    checkedInAt,
-    completedAt,
-    photoUrls,
-    checkInPhotoUrl,
-    completionPhotoUrl,
-    syncStatus,
-    syncRetryCount,
-    completionNotes,
-    metadata,
-  ];
+        id,
+        title,
+        description,
+        dueDateTime,
+        status,
+        priority,
+        latitude,
+        longitude,
+        address,
+        areaId,
+        assignedToId,
+        assignedToName,
+        createdById,
+        createdByName,
+        createdAt,
+        updatedAt,
+        checkedInAt,
+        completedAt,
+        photoUrls,
+        checkInPhotoUrl,
+        completionPhotoUrl,
+        syncStatus,
+        syncRetryCount,
+        completionNotes,
+        metadata,
+      ];
 
   Task copyWith({
     String? id,
@@ -94,6 +97,7 @@ class Task extends Equatable {
     double? latitude,
     double? longitude,
     String? address,
+    String? areaId,
     String? assignedToId,
     String? assignedToName,
     String? createdById,
@@ -120,6 +124,7 @@ class Task extends Equatable {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       address: address ?? this.address,
+      areaId: areaId ?? this.areaId,
       assignedToId: assignedToId ?? this.assignedToId,
       assignedToName: assignedToName ?? this.assignedToName,
       createdById: createdById ?? this.createdById,

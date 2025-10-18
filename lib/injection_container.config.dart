@@ -39,6 +39,7 @@ import 'features/auth/domain/usecases/get_current_user.dart' as _i191;
 import 'features/auth/domain/usecases/sign_in_with_email.dart' as _i509;
 import 'features/auth/domain/usecases/sign_in_with_google.dart' as _i648;
 import 'features/auth/domain/usecases/sign_out.dart' as _i872;
+import 'features/auth/domain/usecases/update_user_area.dart' as _i250;
 import 'features/auth/presentation/bloc/auth_bloc.dart' as _i363;
 import 'features/location/data/datasources/location_datasource.dart' as _i942;
 import 'features/location/data/repositories/location_repository_impl.dart'
@@ -161,6 +162,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i648.SignInWithGoogle(gh<_i1015.AuthRepository>()));
     gh.lazySingleton<_i872.SignOut>(
         () => _i872.SignOut(gh<_i1015.AuthRepository>()));
+    gh.lazySingleton<_i250.UpdateUserArea>(
+        () => _i250.UpdateUserArea(gh<_i1015.AuthRepository>()));
     gh.factory<_i754.CheckInTask>(
         () => _i754.CheckInTask(gh<_i356.TaskRepository>()));
     gh.factory<_i202.CompleteTask>(

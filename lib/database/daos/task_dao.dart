@@ -11,8 +11,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   // Get all tasks for a user
   Stream<List<TaskEntity>> watchTasksByUserId(String userId) {
     return (select(tasks)
-      ..where((t) => t.assignedToId.equals(userId))
-      ..orderBy([(t) => OrderingTerm.desc(t.dueDateTime)]))
+          ..where((t) => t.assignedToId.equals(userId))
+          ..orderBy([(t) => OrderingTerm.desc(t.dueDateTime)]))
         .watch();
   }
 
@@ -23,8 +23,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     required int offset,
     String? status,
   }) {
-    final query = select(tasks)
-      ..where((t) => t.assignedToId.equals(userId));
+    final query = select(tasks)..where((t) => t.assignedToId.equals(userId));
 
     if (status != null && status != 'all') {
       query.where((t) => t.status.equals(status));
@@ -45,15 +44,15 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   // Search tasks
   Future<List<TaskEntity>> searchTasks(String userId, String query) {
     return (select(tasks)
-      ..where((t) =>
-      t.assignedToId.equals(userId) &
-      (t.title.contains(query) | t.description.contains(query))))
+          ..where((t) =>
+              t.assignedToId.equals(userId) &
+              (t.title.contains(query) | t.description.contains(query))))
         .get();
   }
 
   // Insert task
   Future<int> insertTask(TasksCompanion task) {
-    return into(tasks).insert(task);
+    return into(tasks).insertOnConflictUpdate(task);
   }
 
   // Update task

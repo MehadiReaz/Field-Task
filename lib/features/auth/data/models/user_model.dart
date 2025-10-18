@@ -1,5 +1,6 @@
 import '../../domain/entities/user.dart';
 import '../../../../core/enums/user_role.dart';
+import '../../../../core/utils/timestamp_helper.dart';
 
 class UserModel extends User {
   const UserModel({
@@ -13,6 +14,8 @@ class UserModel extends User {
     required super.isActive,
     super.phoneNumber,
     super.department,
+    super.selectedAreaId,
+    super.selectedAreaName,
     super.metadata,
   });
 
@@ -23,14 +26,16 @@ class UserModel extends User {
       displayName: json['displayName'] as String,
       photoUrl: json['photoUrl'] as String?,
       role: UserRole.values.firstWhere(
-            (e) => e.toString() == 'UserRole.${json['role']}',
+        (e) => e.toString() == 'UserRole.${json['role']}',
         orElse: () => UserRole.agent,
       ),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: TimestampHelper.parseDateTime(json['createdAt']),
+      updatedAt: TimestampHelper.parseDateTime(json['updatedAt']),
       isActive: json['isActive'] as bool? ?? true,
       phoneNumber: json['phoneNumber'] as String?,
       department: json['department'] as String?,
+      selectedAreaId: json['selectedAreaId'] as String?,
+      selectedAreaName: json['selectedAreaName'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
@@ -47,6 +52,8 @@ class UserModel extends User {
       'isActive': isActive,
       'phoneNumber': phoneNumber,
       'department': department,
+      'selectedAreaId': selectedAreaId,
+      'selectedAreaName': selectedAreaName,
       'metadata': metadata,
     };
   }
@@ -71,6 +78,8 @@ class UserModel extends User {
       isActive: user.isActive,
       phoneNumber: user.phoneNumber,
       department: user.department,
+      selectedAreaId: user.selectedAreaId,
+      selectedAreaName: user.selectedAreaName,
       metadata: user.metadata,
     );
   }

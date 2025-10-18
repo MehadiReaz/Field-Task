@@ -1,3 +1,5 @@
+import 'package:task_trackr/core/utils/timestamp_helper.dart';
+
 import '../../domain/entities/area.dart';
 
 class AreaModel extends Area {
@@ -28,8 +30,8 @@ class AreaModel extends Area {
       assignedAgentIds: List<String>.from(data['assignedAgentIds'] ?? []),
       createdById: data['createdById'] as String,
       createdByName: data['createdByName'] as String,
-      createdAt: DateTime.parse(data['createdAt'] as String),
-      updatedAt: DateTime.parse(data['updatedAt'] as String),
+      createdAt: TimestampHelper.parseDateTime(data['createdAt']),
+      updatedAt: TimestampHelper.parseDateTime(data['updatedAt']),
       isActive: data['isActive'] as bool? ?? true,
     );
   }

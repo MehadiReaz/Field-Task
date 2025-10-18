@@ -36,21 +36,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onCheckAuthStatus(
-      CheckAuthStatusEvent event,
-      Emitter<AuthState> emit,
-      ) async {
+    CheckAuthStatusEvent event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoadingState());
 
     final result = await checkAuthStatus(const NoParams());
 
-    result.fold(
-          (failure) => emit(AuthUnauthenticatedState()),
-          (isAuthenticated) async {
+    await result.fold(
+      (failure) async {
+        emit(AuthUnauthenticatedState());
+      },
+      (isAuthenticated) async {
         if (isAuthenticated) {
           final userResult = await getCurrentUser(const NoParams());
           userResult.fold(
-                (failure) => emit(AuthUnauthenticatedState()),
-                (user) => emit(AuthAuthenticatedState(user: user)),
+            (failure) {
+              emit(AuthUnauthenticatedState());
+            },
+            (user) {
+              emit(AuthAuthenticatedState(user: user));
+            },
           );
         } else {
           emit(AuthUnauthenticatedState());
@@ -60,23 +66,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onSignInWithGoogle(
-      SignInWithGoogleEvent event,
-      Emitter<AuthState> emit,
-      ) async {
+    SignInWithGoogleEvent event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoadingState());
 
     final result = await signInWithGoogle(const NoParams());
 
     result.fold(
-          (failure) => emit(AuthErrorState(message: failure.message)),
-          (user) => emit(AuthAuthenticatedState(user: user)),
+      (failure) => emit(AuthErrorState(message: failure.message)),
+      (user) => emit(AuthAuthenticatedState(user: user)),
     );
   }
 
   Future<void> _onSignInWithEmail(
-      SignInWithEmailEvent event,
-      Emitter<AuthState> emit,
-      ) async {
+    SignInWithEmailEvent event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoadingState());
 
     final result = await signInWithEmail(
@@ -87,34 +93,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
 
     result.fold(
-          (failure) => emit(AuthErrorState(message: failure.message)),
-          (user) => emit(AuthAuthenticatedState(user: user)),
+      (failure) => emit(AuthErrorState(message: failure.message)),
+      (user) => emit(AuthAuthenticatedState(user: user)),
     );
   }
 
   Future<void> _onSignOut(
-      SignOutEvent event,
-      Emitter<AuthState> emit,
-      ) async {
+    SignOutEvent event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoadingState());
 
     final result = await signOut(const NoParams());
 
     result.fold(
-          (failure) => emit(AuthErrorState(message: failure.message)),
-          (_) => emit(AuthUnauthenticatedState()),
+      (failure) => emit(AuthErrorState(message: failure.message)),
+      (_) => emit(AuthUnauthenticatedState()),
     );
   }
 
   Future<void> _onGetCurrentUser(
-      GetCurrentUserEvent event,
-      Emitter<AuthState> emit,
-      ) async {
+    GetCurrentUserEvent event,
+    Emitter<AuthState> emit,
+  ) async {
     final result = await getCurrentUser(const NoParams());
 
     result.fold(
-          (failure) => emit(AuthUnauthenticatedState()),
-          (user) => emit(AuthAuthenticatedState(user: user)),
+      (failure) => emit(AuthUnauthenticatedState()),
+      (user) => emit(AuthAuthenticatedState(user: user)),
     );
   }
 }

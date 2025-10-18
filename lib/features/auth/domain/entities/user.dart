@@ -12,6 +12,8 @@ class User extends Equatable {
   final bool isActive;
   final String? phoneNumber;
   final String? department;
+  final String? selectedAreaId; // Selected area ID for the user
+  final String? selectedAreaName; // Selected area name for the user
   final Map<String, dynamic>? metadata;
 
   const User({
@@ -25,23 +27,27 @@ class User extends Equatable {
     required this.isActive,
     this.phoneNumber,
     this.department,
+    this.selectedAreaId,
+    this.selectedAreaName,
     this.metadata,
   });
 
   @override
   List<Object?> get props => [
-    id,
-    email,
-    displayName,
-    photoUrl,
-    role,
-    createdAt,
-    updatedAt,
-    isActive,
-    phoneNumber,
-    department,
-    metadata,
-  ];
+        id,
+        email,
+        displayName,
+        photoUrl,
+        role,
+        createdAt,
+        updatedAt,
+        isActive,
+        phoneNumber,
+        department,
+        selectedAreaId,
+        selectedAreaName,
+        metadata,
+      ];
 
   User copyWith({
     String? id,
@@ -54,6 +60,8 @@ class User extends Equatable {
     bool? isActive,
     String? phoneNumber,
     String? department,
+    String? selectedAreaId,
+    String? selectedAreaName,
     Map<String, dynamic>? metadata,
   }) {
     return User(
@@ -67,6 +75,8 @@ class User extends Equatable {
       isActive: isActive ?? this.isActive,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       department: department ?? this.department,
+      selectedAreaId: selectedAreaId ?? this.selectedAreaId,
+      selectedAreaName: selectedAreaName ?? this.selectedAreaName,
       metadata: metadata ?? this.metadata,
     );
   }
