@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/task.dart';
 
 abstract class TaskState extends Equatable {
@@ -21,11 +22,17 @@ class TaskLoading extends TaskState {
 /// Tasks loaded successfully
 class TasksLoaded extends TaskState {
   final List<Task> tasks;
+  final DocumentSnapshot? lastDocument;
+  final bool hasMore;
 
-  const TasksLoaded(this.tasks);
+  const TasksLoaded(
+    this.tasks, {
+    this.lastDocument,
+    this.hasMore = false,
+  });
 
   @override
-  List<Object?> get props => [tasks];
+  List<Object?> get props => [tasks, lastDocument, hasMore];
 }
 
 /// Single task loaded successfully
@@ -66,9 +73,26 @@ class TasksEmpty extends TaskState {
 /// Refreshing state (pull to refresh)
 class TaskRefreshing extends TaskState {
   final List<Task> currentTasks;
+  final DocumentSnapshot? lastDocument;
+  final bool hasMore;
 
-  const TaskRefreshing(this.currentTasks);
+  const TaskRefreshing(
+    this.currentTasks, {
+    this.lastDocument,
+    this.hasMore = false,
+  });
 
   @override
-  List<Object?> get props => [currentTasks];
+  List<Object?> get props => [currentTasks, lastDocument, hasMore];
+}
+
+/// Search results state
+class TaskSearchResults extends TaskState {
+  final List<Task> tasks;
+  final String query;
+
+  const TaskSearchResults(this.tasks, this.query);
+
+  @override
+  List<Object?> get props => [tasks, query];
 }

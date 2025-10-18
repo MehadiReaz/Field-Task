@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
 import 'core/network/network_info.dart' as _i75;
 import 'core/network/network_info_impl.dart' as _i973;
+import 'core/services/connectivity_service.dart' as _i524;
 import 'database/database.dart' as _i565;
 import 'features/areas/data/datasources/area_remote_data_source.dart' as _i331;
 import 'features/areas/data/repositories/area_repository_impl.dart' as _i90;
@@ -62,6 +63,7 @@ import 'features/tasks/domain/usecases/delete_task.dart' as _i335;
 import 'features/tasks/domain/usecases/filter_tasks.dart' as _i690;
 import 'features/tasks/domain/usecases/get_task_by_id.dart' as _i869;
 import 'features/tasks/domain/usecases/get_tasks.dart' as _i441;
+import 'features/tasks/domain/usecases/get_tasks_page.dart' as _i968;
 import 'features/tasks/domain/usecases/search_tasks.dart' as _i175;
 import 'features/tasks/domain/usecases/update_task.dart' as _i184;
 import 'features/tasks/presentation/bloc/task_bloc.dart' as _i1006;
@@ -91,6 +93,8 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i558.FlutterSecureStorage>(
         () => registerModule.secureStorage);
+    gh.lazySingleton<_i524.ConnectivityService>(
+        () => _i524.ConnectivityService());
     gh.lazySingleton<_i942.LocationDataSource>(
         () => _i942.LocationDataSourceImpl());
     gh.lazySingleton<_i55.LocationRepository>(
@@ -176,12 +180,25 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i690.FilterTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i441.GetTasks>(
         () => _i441.GetTasks(gh<_i356.TaskRepository>()));
+    gh.factory<_i968.GetTasksPage>(
+        () => _i968.GetTasksPage(gh<_i356.TaskRepository>()));
     gh.factory<_i869.GetTaskById>(
         () => _i869.GetTaskById(gh<_i356.TaskRepository>()));
     gh.factory<_i175.SearchTasks>(
         () => _i175.SearchTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i184.UpdateTask>(
         () => _i184.UpdateTask(gh<_i356.TaskRepository>()));
+    gh.factory<_i1006.TaskBloc>(() => _i1006.TaskBloc(
+          getTasks: gh<_i441.GetTasks>(),
+          getTasksPage: gh<_i968.GetTasksPage>(),
+          getTaskById: gh<_i869.GetTaskById>(),
+          createTask: gh<_i483.CreateTask>(),
+          updateTask: gh<_i184.UpdateTask>(),
+          deleteTask: gh<_i335.DeleteTask>(),
+          checkInTask: gh<_i754.CheckInTask>(),
+          completeTask: gh<_i202.CompleteTask>(),
+          searchTasks: gh<_i175.SearchTasks>(),
+        ));
     gh.factory<_i508.AreaBloc>(() => _i508.AreaBloc(
           getAreas: gh<_i780.GetAreas>(),
           getAreaById: gh<_i973.GetAreaById>(),
@@ -196,15 +213,6 @@ extension GetItInjectableX on _i174.GetIt {
           signOut: gh<_i872.SignOut>(),
           getCurrentUser: gh<_i191.GetCurrentUser>(),
           checkAuthStatus: gh<_i818.CheckAuthStatus>(),
-        ));
-    gh.factory<_i1006.TaskBloc>(() => _i1006.TaskBloc(
-          getTasks: gh<_i441.GetTasks>(),
-          getTaskById: gh<_i869.GetTaskById>(),
-          createTask: gh<_i483.CreateTask>(),
-          updateTask: gh<_i184.UpdateTask>(),
-          deleteTask: gh<_i335.DeleteTask>(),
-          checkInTask: gh<_i754.CheckInTask>(),
-          completeTask: gh<_i202.CompleteTask>(),
         ));
     return this;
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../injection_container.dart';
@@ -22,23 +23,98 @@ class TaskListPage extends StatelessWidget {
 }
 
 class TaskListView extends StatefulWidget {
-  const TaskListView({Key? key}) : super(key: key);
+  const TaskListView({super.key});
 
   @override
   State<TaskListView> createState() => _TaskListViewState();
 }
 
 class _TaskListViewState extends State<TaskListView> {
+  late ScrollController _scrollController;
+  final TextEditingController _searchController = TextEditingController();
+  String _currentFilter = 'all';
+  List<Task> _filteredTasks = []; // Current page's filtered tasks
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _searchController.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final bloc = context.read<TaskBloc>();
+    final state = bloc.state;
+
+    // Trigger load more when user scrolls to 90% of the list
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.9) {
+      if (state is TasksLoaded && state.hasMore) {
+        // Only load more if we have more items
+        bloc.add(const LoadMoreTasksEvent());
+      }
+    }
+  }
+
+  void _applyFilter(String filter) {
+    setState(() {
+      _currentFilter = filter;
+    });
+    // Refresh with new filter - reset pagination
+    context.read<TaskBloc>().add(const LoadMyTasksEvent(isRefresh: true));
+  }
+
+  void _performSearch(String query) {
+    // Cancel previous debounce timer
+    _searchDebounce?.cancel();
+
+    // Debounce with 500ms delay to avoid too many requests
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      // Only emit event if user has typed something
+      if (query.isNotEmpty) {
+        context.read<TaskBloc>().add(SearchTasksEvent(query));
+      } else {
+        // If query is empty, clear search
+        context.read<TaskBloc>().add(const ClearSearchEvent());
+      }
+    });
+  }
+
+  List<Task> _getFilteredTasks(List<Task> allTasks) {
+    List<Task> filtered = allTasks;
+
+    // Apply status filter only (search is now server-side)
+    if (_currentFilter != 'all') {
+      filtered = filtered
+          .where((task) =>
+              task.status.value.toLowerCase() == _currentFilter.toLowerCase())
+          .toList();
+    }
+
+    return filtered;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Tasks'),
+        elevation: 0,
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
             onSelected: (value) {
-              _applyFilter(context, value);
+              _applyFilter(value);
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -110,23 +186,164 @@ class _TaskListViewState extends State<TaskListView> {
             final tasks = state is TasksLoaded
                 ? state.tasks
                 : (state as TaskRefreshing).currentTasks;
+            final hasMore = state is TasksLoaded
+                ? state.hasMore
+                : (state as TaskRefreshing).hasMore;
+
+            // Apply filters to tasks
+            _filteredTasks = _getFilteredTasks(tasks);
 
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<TaskBloc>().add(const RefreshTasksEvent());
-                // Wait for the refresh to complete
-                await Future.delayed(const Duration(seconds: 1));
+                context
+                    .read<TaskBloc>()
+                    .add(const LoadMyTasksEvent(isRefresh: true));
+                await Future.delayed(const Duration(milliseconds: 500));
               },
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return TaskCard(
-                    task: task,
-                    onTap: () => _navigateToTaskDetail(context, task),
-                  );
-                },
+              child: Column(
+                children: [
+                  // Search Bar
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _performSearch,
+                      decoration: InputDecoration(
+                        hintText: 'Search tasks by name or description...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _performSearch('');
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Task Count and Filter Info
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Showing ${_filteredTasks.length} task${_filteredTasks.length != 1 ? 's' : ''}${hasMore ? ' (more available)' : ''}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_currentFilter != 'all')
+                          Chip(
+                            label: Text(_currentFilter),
+                            onDeleted: () => _applyFilter('all'),
+                            backgroundColor:
+                                Theme.of(context).primaryColor.withOpacity(0.2),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Task List with Server-Side Pagination
+                  Expanded(
+                    child: _filteredTasks.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _searchController.text.isNotEmpty
+                                      ? 'No tasks match your search'
+                                      : 'No tasks in this filter',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: Colors.grey[600],
+                                      ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount:
+                                _filteredTasks.length + (hasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              // Loading indicator at the bottom when there are more items
+                              if (index == _filteredTasks.length) {
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                    child: Column(
+                                      children: [
+                                        const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Loading more tasks...',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final task = _filteredTasks[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: TaskCard(
+                                  task: task,
+                                  onTap: () =>
+                                      _navigateToTaskDetail(context, task),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             );
           }
@@ -140,14 +357,6 @@ class _TaskListViewState extends State<TaskListView> {
         tooltip: 'Create New Task',
       ),
     );
-  }
-
-  void _applyFilter(BuildContext context, String filter) {
-    if (filter == 'all') {
-      context.read<TaskBloc>().add(const LoadMyTasksEvent());
-    } else {
-      context.read<TaskBloc>().add(LoadTasksByStatusEvent(filter));
-    }
   }
 
   void _navigateToTaskDetail(BuildContext context, Task task) {
@@ -167,9 +376,8 @@ class _TaskListViewState extends State<TaskListView> {
       ),
     );
 
-    // Refresh task list if a task was created
     if (result == true && mounted) {
-      context.read<TaskBloc>().add(const RefreshTasksEvent());
+      context.read<TaskBloc>().add(const LoadMyTasksEvent(isRefresh: true));
     }
   }
 }

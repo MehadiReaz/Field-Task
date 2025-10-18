@@ -3,37 +3,44 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/usecases/get_tasks.dart';
+import '../../domain/usecases/get_tasks_page.dart';
 import '../../domain/usecases/get_task_by_id.dart';
 import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/update_task.dart';
 import '../../domain/usecases/delete_task.dart';
 import '../../domain/usecases/check_in_task.dart';
 import '../../domain/usecases/complete_task.dart';
+import '../../domain/usecases/search_tasks.dart';
 import 'task_event.dart';
 import 'task_state.dart';
 
 @injectable
 class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final GetTasks getTasks;
+  final GetTasksPage getTasksPage;
   final GetTaskById getTaskById;
   final CreateTask createTask;
   final UpdateTask updateTask;
   final DeleteTask deleteTask;
   final CheckInTask checkInTask;
   final CompleteTask completeTask;
+  final SearchTasks searchTasks;
 
   TaskBloc({
     required this.getTasks,
+    required this.getTasksPage,
     required this.getTaskById,
     required this.createTask,
     required this.updateTask,
     required this.deleteTask,
     required this.checkInTask,
     required this.completeTask,
+    required this.searchTasks,
   }) : super(const TaskInitial()) {
     on<LoadTasksEvent>(_onLoadTasks);
     on<LoadTasksByStatusEvent>(_onLoadTasksByStatus);
     on<LoadMyTasksEvent>(_onLoadMyTasks);
+    on<LoadMoreTasksEvent>(_onLoadMoreTasks);
     on<LoadTaskByIdEvent>(_onLoadTaskById);
     on<CreateTaskEvent>(_onCreateTask);
     on<UpdateTaskEvent>(_onUpdateTask);
@@ -41,6 +48,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     on<CheckInTaskEvent>(_onCheckInTask);
     on<CompleteTaskEvent>(_onCompleteTask);
     on<RefreshTasksEvent>(_onRefreshTasks);
+    on<SearchTasksEvent>(_onSearchTasks);
+    on<ClearSearchEvent>(_onClearSearch);
   }
 
   Future<void> _onLoadTasks(
@@ -96,19 +105,66 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     LoadMyTasksEvent event,
     Emitter<TaskState> emit,
   ) async {
-    emit(const TaskLoading());
+    // If refreshing, reset pagination
+    if (event.isRefresh) {
+      emit(const TaskLoading());
+    } else if (state is! TasksLoaded) {
+      // If loading for the first time
+      emit(const TaskLoading());
+    }
 
-    // Get all tasks - repository will filter by current user
-    final result = await getTasks(NoParams());
+    final result = await getTasksPage(GetTasksPageParams(
+      lastDocument: null, // First page
+      pageSize: 10,
+    ));
 
     result.fold(
       (failure) => emit(TaskError(failure.message)),
-      (tasks) {
-        if (tasks.isEmpty) {
+      (taskPage) {
+        if (taskPage.tasks.isEmpty) {
           emit(const TasksEmpty());
         } else {
-          emit(TasksLoaded(tasks));
+          emit(TasksLoaded(
+            taskPage.tasks,
+            lastDocument: taskPage.lastDocument,
+            hasMore: taskPage.hasMore,
+          ));
         }
+      },
+    );
+  }
+
+  Future<void> _onLoadMoreTasks(
+    LoadMoreTasksEvent event,
+    Emitter<TaskState> emit,
+  ) async {
+    final currentState = state;
+
+    // Only load more if we're already in TasksLoaded state and hasMore is true
+    if (currentState is! TasksLoaded) return;
+    if (!currentState.hasMore) return;
+
+    final currentTasks = currentState.tasks;
+    final lastDocument = currentState.lastDocument;
+
+    final result = await getTasksPage(GetTasksPageParams(
+      lastDocument: lastDocument,
+      pageSize: 10,
+    ));
+
+    result.fold(
+      (failure) {
+        // Keep showing current tasks, just log the error
+        print('❌ Error loading more tasks: $failure');
+      },
+      (taskPage) {
+        // Append new tasks to existing ones
+        final allTasks = [...currentTasks, ...taskPage.tasks];
+        emit(TasksLoaded(
+          allTasks,
+          lastDocument: taskPage.lastDocument,
+          hasMore: taskPage.hasMore,
+        ));
       },
     );
   }
@@ -216,6 +272,72 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
 
     emit(TaskRefreshing(currentTasks.cast()));
 
+    final result = await getTasks(NoParams());
+
+    result.fold(
+      (failure) => emit(TaskError(failure.message)),
+      (tasks) {
+        if (tasks.isEmpty) {
+          emit(const TasksEmpty());
+        } else {
+          emit(TasksLoaded(tasks));
+        }
+      },
+    );
+  }
+
+  Future<void> _onSearchTasks(
+    SearchTasksEvent event,
+    Emitter<TaskState> emit,
+  ) async {
+    // If query is empty, just load all tasks
+    if (event.query.isEmpty) {
+      final result = await getTasks(NoParams());
+
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (tasks) {
+          if (tasks.isEmpty) {
+            emit(const TasksEmpty());
+          } else {
+            emit(TasksLoaded(tasks));
+          }
+        },
+      );
+      return;
+    }
+
+    // Don't show loading if we already have tasks (for better UX during typing)
+    if (state is! TasksLoaded) {
+      emit(const TaskLoading());
+    }
+
+    // Perform search
+    final result = await searchTasks(SearchTasksParams(
+      query: event.query,
+      searchFields: const ['title', 'description'],
+    ));
+
+    result.fold(
+      (failure) {
+        print('❌ Search failed: ${failure.message}');
+        emit(TaskError(failure.message));
+      },
+      (tasks) {
+        if (tasks.isEmpty) {
+          emit(const TasksEmpty());
+        } else {
+          emit(TasksLoaded(tasks));
+        }
+      },
+    );
+  }
+
+  Future<void> _onClearSearch(
+    ClearSearchEvent event,
+    Emitter<TaskState> emit,
+  ) async {
+    // Just reload all tasks
     final result = await getTasks(NoParams());
 
     result.fold(

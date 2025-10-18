@@ -39,6 +39,42 @@
           "order": "Ascending"
         }
       ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "assignedTo",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "Descending"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "Descending"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "createdBy",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "Descending"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "Descending"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -73,34 +73,34 @@ class _LoginPageState extends State<LoginPage> {
               if (!mounted) return;
 
               // Show area selection dialog
-              print('📱 Login: Showing area selection dialog');
-              final result = await showDialog<bool>(
-                context: context,
-                barrierDismissible: false,
-                builder: (dialogContext) => BlocProvider(
-                  create: (context) => getIt<AreaBloc>(),
-                  child: const AreaSelectionDialog(isRequired: true),
-                ),
-              );
+              // print('📱 Login: Showing area selection dialog');
+              // final result = await showDialog<bool>(
+              //   context: context,
+              //   barrierDismissible: false,
+              //   builder: (dialogContext) => BlocProvider(
+              //     create: (context) => getIt<AreaBloc>(),
+              //     child: const AreaSelectionDialog(isRequired: true),
+              //   ),
+              // );
 
-              print('✅ Login: Dialog result: $result');
+              // print('✅ Login: Dialog result: $result');
 
-              if (result == true && mounted) {
-                // Area selected, refresh user data and proceed to home
-                print(
-                    '✅ Login: Area selected, refreshing user and navigating to home');
-                context.read<AuthBloc>().add(GetCurrentUserEvent());
-                context.go(RouteNames.home);
-              } else if (mounted) {
-                // If dialog was somehow dismissed without selection, show error
-                print('❌ Login: Dialog dismissed without selection');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('You must select an area to continue'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
+              // if (result == true && mounted) {
+              //   // Area selected, refresh user data and proceed to home
+              //   print(
+              //       '✅ Login: Area selected, refreshing user and navigating to home');
+              //   context.read<AuthBloc>().add(GetCurrentUserEvent());
+              //   context.go(RouteNames.home);
+              // } else if (mounted) {
+              //   // If dialog was somehow dismissed without selection, show error
+              //   print('❌ Login: Dialog dismissed without selection');
+              //   ScaffoldMessenger.of(context).showSnackBar(
+              //     const SnackBar(
+              //       content: Text('You must select an area to continue'),
+              //       backgroundColor: Colors.red,
+              //     ),
+              //   );
+              // }
             } else {
               // User has area selected, navigate to home
               print('✅ Login: User has area, navigating to home');

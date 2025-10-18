@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../core/services/connectivity_service.dart';
+import '../core/widgets/connectivity_banner.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/location/presentation/bloc/location_bloc.dart';
 import '../injection_container.dart';
@@ -29,6 +31,12 @@ class FieldTaskApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         routerConfig: AppRouter.router,
+        builder: (context, child) {
+          return ConnectivityBanner(
+            connectivityService: getIt<ConnectivityService>(),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
       ),
     );
   }

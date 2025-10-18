@@ -1,10 +1,12 @@
 import 'package:dartz/dartz.dart' hide Task;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
 import '../datasources/task_remote_datasource.dart';
 import '../datasources/task_local_datasource.dart';
 import '../models/task_model.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/models/task_page.dart';
 import '../../domain/repositories/task_repository.dart';
 
 @LazySingleton(as: TaskRepository)
@@ -38,6 +40,33 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<Either<Failure, TaskPage>> getTasksPage({
+    DocumentSnapshot? lastDocument,
+    int pageSize = 10,
+  }) async {
+    try {
+      final pageModel = await remoteDataSource.getTasksPage(
+        lastDocument: lastDocument,
+        pageSize: pageSize,
+      );
+
+      // Convert to domain model
+      final tasks = pageModel.tasks.map((model) => model.toEntity()).toList();
+
+      final taskPage = TaskPage(
+        tasks: tasks,
+        hasMore: pageModel.hasMore,
+        lastDocument: pageModel.lastDocument,
+      );
+
+      return Right(taskPage);
+    } catch (e) {
+      print('❌ Error in getTasksPage: $e');
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, Task>> getTaskById(String id) async {
     try {
       final task = await remoteDataSource.getTaskById(id);
@@ -62,7 +91,7 @@ class TaskRepositoryImpl implements TaskRepository {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
-        areaId: task.areaId, // Include areaId
+        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
@@ -105,7 +134,7 @@ class TaskRepositoryImpl implements TaskRepository {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
-        areaId: task.areaId, // Include areaId
+        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
@@ -170,6 +199,40 @@ class TaskRepositoryImpl implements TaskRepository {
       return Right(task);
     } catch (e) {
       return Left(const ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Task>>> searchTasks({
+    required String query,
+    List<String> searchFields = const ['title', 'description'],
+  }) async {
+    try {
+      final tasks = await remoteDataSource.searchTasks(
+        query: query,
+        searchFields: searchFields,
+      );
+      return Right(tasks);
+    } catch (e) {
+      print('❌ Error in searchTasks: $e');
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Task>>> searchTasksLocal({
+    required String query,
+    List<String> searchFields = const ['title', 'description'],
+  }) async {
+    try {
+      final tasks = await localDataSource.searchTasks(
+        query: query,
+        searchFields: searchFields,
+      );
+      return Right(tasks);
+    } catch (e) {
+      print('❌ Error in searchTasksLocal: $e');
+      return Left(ServerFailure(e.toString()));
     }
   }
 

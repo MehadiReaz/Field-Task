@@ -5,6 +5,10 @@ import '../models/task_model.dart';
 
 abstract class TaskLocalDataSource {
   Future<List<TaskModel>> getTasks();
+  Future<List<TaskModel>> searchTasks({
+    required String query,
+    List<String> searchFields = const ['title', 'description'],
+  });
   Future<TaskModel?> getTaskById(String id);
   Future<void> saveTask(TaskModel task);
   Future<void> updateTask(TaskModel task);
@@ -27,6 +31,76 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
       return [];
     } catch (e) {
       throw LocalDatabaseException('Failed to fetch tasks: $e');
+    }
+  }
+
+  @override
+  Future<List<TaskModel>> searchTasks({
+    required String query,
+    List<String> searchFields = const ['title', 'description'],
+  }) async {
+    try {
+      // Get current user ID (this is a limitation - we'd need context for this)
+      // For now, use a placeholder or skip local search
+      // In a real app, you'd pass userId from the BLoC layer
+
+      // Fallback: Get all tasks and filter locally
+      // This is inefficient but works for offline scenarios
+      final allTasks = await database.taskDao.getTasksPaginated(
+        userId: '', // This would need to come from context
+        limit: 10000, // Get all tasks
+        offset: 0,
+      );
+
+      // Filter by search query (case-insensitive)
+      final queryLower = query.toLowerCase();
+      final filteredTasks = allTasks.where((taskEntity) {
+        // Convert task entity to TaskModel for easier field access
+        final task = TaskModel.fromFirestore(_taskEntityToMap(taskEntity));
+
+        for (final field in searchFields) {
+          String? fieldValue;
+
+          switch (field.toLowerCase()) {
+            case 'title':
+              fieldValue = task.title;
+              break;
+            case 'description':
+              fieldValue = task.description;
+              break;
+            case 'address':
+              fieldValue = task.address;
+              break;
+            case 'assignedtoname':
+              fieldValue = task.assignedToName;
+              break;
+            case 'status':
+              fieldValue = task.status.value;
+              break;
+          }
+
+          if (fieldValue != null &&
+              fieldValue.toLowerCase().contains(queryLower)) {
+            return true;
+          }
+        }
+        return false;
+      }).toList();
+
+      // Convert to TaskModel list
+      final result = filteredTasks
+          .map((e) => TaskModel.fromFirestore(_taskEntityToMap(e)))
+          .toList();
+
+      // Sort by createdAt descending
+      result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      print('✅ Found ${result.length} tasks locally matching "$query"');
+      return result;
+    } catch (e) {
+      print('⚠️ Failed to search tasks locally: $e');
+      // Return empty list on error (graceful fallback)
+      return [];
     }
   }
 

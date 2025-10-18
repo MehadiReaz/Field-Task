@@ -15,7 +15,7 @@ class TaskModel extends entity.Task {
     required super.latitude,
     required super.longitude,
     super.address,
-    super.areaId,
+    // super.areaId, // COMMENTED OUT: Not used in this project
     required super.assignedToId,
     required super.assignedToName,
     required super.createdById,
@@ -45,7 +45,7 @@ class TaskModel extends entity.Task {
       latitude: (data['locationLat'] as num).toDouble(),
       longitude: (data['locationLng'] as num).toDouble(),
       address: data['locationAddress'] as String?,
-      areaId: data['areaId'] as String?,
+      // areaId: data['areaId'] as String?, // COMMENTED OUT: Not used in this project
       assignedToId: data['assignedTo'] as String,
       assignedToName: data['assignedToName'] as String? ?? '',
       createdById: data['createdBy'] as String,
@@ -81,7 +81,7 @@ class TaskModel extends entity.Task {
       'locationLat': latitude,
       'locationLng': longitude,
       'locationAddress': address,
-      'areaId': areaId,
+      // 'areaId': areaId, // COMMENTED OUT: Not used in this project
       'assignedTo': assignedToId,
       'assignedToName': assignedToName,
       'createdBy': createdById,
@@ -110,7 +110,7 @@ class TaskModel extends entity.Task {
       latitude: latitude,
       longitude: longitude,
       address: address,
-      areaId: areaId,
+      // areaId: areaId, // COMMENTED OUT: Not used in this project
       assignedToId: assignedToId,
       assignedToName: assignedToName,
       createdById: createdById,

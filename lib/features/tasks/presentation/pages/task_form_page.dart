@@ -12,6 +12,7 @@ import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../location/presentation/pages/map_selection_page.dart';
 
 class TaskFormPage extends StatelessWidget {
   final String? taskId;
@@ -216,6 +217,7 @@ class _TaskFormViewState extends State<TaskFormView> {
 
                   const SizedBox(height: 16),
 
+                  /* COMMENTED OUT: Area concept not used in this project
                   // Area Display (Read-only - from user's selected area)
                   BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, authState) {
@@ -261,6 +263,79 @@ class _TaskFormViewState extends State<TaskFormView> {
                     },
                   ),
 
+                  const SizedBox(height: 16),
+                  */
+
+                  // Location Selection
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                color: Colors.blue,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Task Location',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    if (_selectedAddress != null)
+                                      Text(
+                                        _selectedAddress!,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    else
+                                      const Text(
+                                        'No location selected',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: isLoading ? null : _selectLocation,
+                              icon: const Icon(Icons.map),
+                              label: const Text('Select Location on Map'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
 
                   // Save Button
@@ -294,6 +369,25 @@ class _TaskFormViewState extends State<TaskFormView> {
         },
       ),
     );
+  }
+
+  Future<void> _selectLocation() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (context) => MapSelectionPage(
+          initialLat: _selectedLatitude,
+          initialLng: _selectedLongitude,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLatitude = result['latitude'] as double;
+        _selectedLongitude = result['longitude'] as double;
+        _selectedAddress = result['address'] as String?;
+      });
+    }
   }
 
   Future<void> _selectDate() async {
@@ -336,6 +430,7 @@ class _TaskFormViewState extends State<TaskFormView> {
 
     final user = authState.user;
 
+    /* COMMENTED OUT: Area concept not used in this project
     // Check that user has selected an area
     if (user.selectedAreaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -346,10 +441,9 @@ class _TaskFormViewState extends State<TaskFormView> {
       );
       return;
     }
+    */
 
-    // Use area center as default location
-    // In a real scenario, you would fetch area details to get center coordinates
-    // For now, use placeholder coordinates
+    // Use selected location or default coordinates
     double latitude = _selectedLatitude ?? 0.0;
     double longitude = _selectedLongitude ?? 0.0;
 
@@ -371,7 +465,7 @@ class _TaskFormViewState extends State<TaskFormView> {
       latitude: latitude,
       longitude: longitude,
       address: _selectedAddress,
-      areaId: user.selectedAreaId, // Set the user's selected area
+      // areaId: user.selectedAreaId, // COMMENTED OUT: Not used in this project
       assignedToId: user.id,
       assignedToName: user.displayName,
       createdById: user.id,

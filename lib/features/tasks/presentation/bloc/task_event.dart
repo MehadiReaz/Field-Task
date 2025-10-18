@@ -25,7 +25,20 @@ class LoadTasksByStatusEvent extends TaskEvent {
 
 /// Load tasks assigned to current user
 class LoadMyTasksEvent extends TaskEvent {
-  const LoadMyTasksEvent();
+  final bool isRefresh;
+
+  const LoadMyTasksEvent({this.isRefresh = false});
+
+  @override
+  List<Object?> get props => [isRefresh];
+}
+
+/// Load more tasks (for pagination)
+class LoadMoreTasksEvent extends TaskEvent {
+  const LoadMoreTasksEvent();
+
+  @override
+  List<Object?> get props => [];
 }
 
 /// Load a specific task by ID
@@ -112,4 +125,19 @@ class RefreshTasksEvent extends TaskEvent {
 /// Watch tasks for real-time updates
 class WatchTasksEvent extends TaskEvent {
   const WatchTasksEvent();
+}
+
+/// Search tasks by query (title/description)
+class SearchTasksEvent extends TaskEvent {
+  final String query;
+
+  const SearchTasksEvent(this.query);
+
+  @override
+  List<Object?> get props => [query];
+}
+
+/// Clear search and return to full task list
+class ClearSearchEvent extends TaskEvent {
+  const ClearSearchEvent();
 }
