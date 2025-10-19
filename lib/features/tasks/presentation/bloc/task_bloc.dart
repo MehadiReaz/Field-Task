@@ -5,6 +5,8 @@ import 'package:injectable/injectable.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/usecases/get_tasks.dart';
 import '../../domain/usecases/get_tasks_page.dart';
+import '../../domain/usecases/get_tasks_by_status.dart';
+import '../../domain/usecases/get_expired_tasks.dart';
 import '../../domain/usecases/get_task_by_id.dart';
 import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/update_task.dart';
@@ -21,6 +23,8 @@ import 'task_state.dart';
 class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final GetTasks getTasks;
   final GetTasksPage getTasksPage;
+  final GetTasksByStatus getTasksByStatus;
+  final GetExpiredTasks getExpiredTasks;
   final GetTaskById getTaskById;
   final CreateTask createTask;
   final UpdateTask updateTask;
@@ -33,6 +37,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   TaskBloc({
     required this.getTasks,
     required this.getTasksPage,
+    required this.getTasksByStatus,
+    required this.getExpiredTasks,
     required this.getTaskById,
     required this.createTask,
     required this.updateTask,
@@ -44,6 +50,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   }) : super(const TaskInitial()) {
     on<LoadTasksEvent>(_onLoadTasks);
     on<LoadTasksByStatusEvent>(_onLoadTasksByStatus);
+    on<LoadExpiredTasksEvent>(_onLoadExpiredTasks);
     on<LoadMyTasksEvent>(_onLoadMyTasks);
     on<LoadMoreTasksEvent>(_onLoadMoreTasks);
     on<LoadTaskByIdEvent>(_onLoadTaskById);
@@ -96,23 +103,48 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   ) async {
     emit(const TaskLoading());
 
-    final result = await getTasksPage(GetTasksPageParams(
-      lastDocument: null,
-      pageSize: 10,
+    final result = await getTasksByStatus(GetTasksByStatusParams(
       status: event.status,
-      showExpiredOnly: false,
+      useLocal: false,
     ));
 
     result.fold(
       (failure) => emit(TaskError(failure.message)),
-      (taskPage) {
-        if (taskPage.tasks.isEmpty) {
+      (tasks) {
+        if (tasks.isEmpty) {
           emit(const TasksEmpty());
         } else {
           emit(TasksLoaded(
-            taskPage.tasks,
-            lastDocument: taskPage.lastDocument,
-            hasMore: taskPage.hasMore,
+            tasks,
+            lastDocument: null,
+            hasMore: false,
+          ));
+        }
+      },
+    );
+  }
+
+  Future<void> _onLoadExpiredTasks(
+    LoadExpiredTasksEvent event,
+    Emitter<TaskState> emit,
+  ) async {
+    emit(const TaskLoading());
+
+    final result = await getExpiredTasks(GetExpiredTasksParams(
+      useLocal: event.useLocal,
+      userId: event.userId,
+    ));
+
+    result.fold(
+      (failure) => emit(TaskError(failure.message)),
+      (tasks) {
+        if (tasks.isEmpty) {
+          emit(const TasksEmpty());
+        } else {
+          emit(TasksLoaded(
+            tasks,
+            lastDocument: null,
+            hasMore: false,
           ));
         }
       },

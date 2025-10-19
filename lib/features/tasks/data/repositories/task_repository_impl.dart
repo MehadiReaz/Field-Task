@@ -240,6 +240,62 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<Either<Failure, List<Task>>> getTasksByStatus(String status) async {
+    try {
+      final tasks = await remoteDataSource.getTasksByStatus(status);
+
+      // Cache tasks in background
+      for (final task in tasks) {
+        _cacheTaskSilently(task);
+      }
+
+      return Right(tasks);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Task>>> getExpiredTasks() async {
+    try {
+      final tasks = await remoteDataSource.getExpiredTasks();
+
+      // Cache tasks in background
+      for (final task in tasks) {
+        _cacheTaskSilently(task);
+      }
+
+      return Right(tasks);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Task>>> getTasksByStatusLocal(
+    String userId,
+    String status,
+  ) async {
+    try {
+      final tasks = await localDataSource.getTasksByStatus(userId, status);
+      return Right(tasks);
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Task>>> getExpiredTasksLocal(
+      String userId) async {
+    try {
+      final tasks = await localDataSource.getExpiredTasks(userId);
+      return Right(tasks);
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<Task>>> searchTasksLocal({
     required String query,
     List<String> searchFields = const ['title', 'description'],

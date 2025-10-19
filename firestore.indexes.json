@@ -75,6 +75,50 @@
           "order": "Descending"
         }
       ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "assignedTo",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "status",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "Ascending"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "assignedTo",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "status",
+          "order": "Ascending"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "Descending"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "Descending"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

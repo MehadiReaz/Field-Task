@@ -6,10 +6,7 @@ import '../../../../app/routes/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/utils/validators.dart';
-import '../../../../injection_container.dart';
-import '../../../areas/presentation/bloc/area_bloc.dart';
 import '../bloc/auth_bloc.dart';
-import '../widgets/area_selection_dialog.dart';
 import '../widgets/google_sign_in_button.dart';
 
 class LoginPage extends StatefulWidget {

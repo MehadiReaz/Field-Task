@@ -12,6 +12,11 @@ abstract class TaskRepository {
     String? status,
     bool showExpiredOnly = false,
   });
+  Future<Either<Failure, List<Task>>> getTasksByStatus(String status);
+  Future<Either<Failure, List<Task>>> getExpiredTasks();
+  Future<Either<Failure, List<Task>>> getTasksByStatusLocal(
+      String userId, String status);
+  Future<Either<Failure, List<Task>>> getExpiredTasksLocal(String userId);
   Future<Either<Failure, List<Task>>> searchTasks({
     required String query,
     List<String> searchFields = const ['title', 'description'],

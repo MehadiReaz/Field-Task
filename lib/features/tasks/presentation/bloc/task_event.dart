@@ -23,6 +23,20 @@ class LoadTasksByStatusEvent extends TaskEvent {
   List<Object?> get props => [status];
 }
 
+/// Load expired tasks (tasks past due date and not completed)
+class LoadExpiredTasksEvent extends TaskEvent {
+  final bool useLocal;
+  final String? userId;
+
+  const LoadExpiredTasksEvent({
+    this.useLocal = false,
+    this.userId,
+  });
+
+  @override
+  List<Object?> get props => [useLocal, userId];
+}
+
 /// Load tasks assigned to current user
 class LoadMyTasksEvent extends TaskEvent {
   final bool isRefresh;

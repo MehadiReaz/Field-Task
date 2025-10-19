@@ -70,8 +70,20 @@ class _TaskListViewState extends State<TaskListView> {
     setState(() {
       _currentFilter = filter;
     });
+
     // Refresh with new filter - reset pagination
-    context.read<TaskBloc>().add(const LoadMyTasksEvent(isRefresh: true));
+    final bloc = context.read<TaskBloc>();
+
+    if (filter == 'expired') {
+      // Load expired tasks
+      bloc.add(const LoadExpiredTasksEvent(useLocal: false));
+    } else if (filter == 'all') {
+      // Load all tasks with pagination
+      bloc.add(const LoadMyTasksEvent(isRefresh: true));
+    } else {
+      // Load tasks by specific status
+      bloc.add(LoadTasksByStatusEvent(filter));
+    }
   }
 
   void _performSearch(String query) {
@@ -91,17 +103,25 @@ class _TaskListViewState extends State<TaskListView> {
   }
 
   List<Task> _getFilteredTasks(List<Task> allTasks) {
-    List<Task> filtered = allTasks;
+    // All filtering is now done server-side or via BLoC events
+    // This method can be simplified or removed in future refactoring
+    return allTasks;
+  }
 
-    // Apply status filter only (search is now server-side)
-    if (_currentFilter != 'all') {
-      filtered = filtered
-          .where((task) =>
-              task.status.value.toLowerCase() == _currentFilter.toLowerCase())
-          .toList();
+  String _getFilterDisplayName(String filter) {
+    switch (filter) {
+      case 'pending':
+        return 'Pending';
+      case 'checked_in':
+        return 'Checked In';
+      case 'completed':
+        return 'Completed';
+      case 'expired':
+        return 'Expired';
+      case 'all':
+      default:
+        return 'All';
     }
-
-    return filtered;
   }
 
   @override
@@ -119,19 +139,54 @@ class _TaskListViewState extends State<TaskListView> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'all',
-                child: Text('All Tasks'),
+                child: Row(
+                  children: [
+                    Icon(Icons.list, size: 20),
+                    SizedBox(width: 8),
+                    Text('All Tasks'),
+                  ],
+                ),
               ),
               const PopupMenuItem(
                 value: 'pending',
-                child: Text('Pending'),
+                child: Row(
+                  children: [
+                    Icon(Icons.pending_actions, size: 20, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Pending'),
+                  ],
+                ),
               ),
               const PopupMenuItem(
-                value: 'checkedIn',
-                child: Text('Checked In'),
+                value: 'checked_in',
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 20, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Checked In'),
+                  ],
+                ),
               ),
               const PopupMenuItem(
                 value: 'completed',
-                child: Text('Completed'),
+                child: Row(
+                  children: [
+                    Icon(Icons.done_all, size: 20, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Completed'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'expired',
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Expired (Overdue)'),
+                  ],
+                ),
               ),
             ],
           ),
@@ -258,7 +313,7 @@ class _TaskListViewState extends State<TaskListView> {
                         ),
                         if (_currentFilter != 'all')
                           Chip(
-                            label: Text(_currentFilter),
+                            label: Text(_getFilterDisplayName(_currentFilter)),
                             onDeleted: () => _applyFilter('all'),
                             backgroundColor:
                                 Theme.of(context).primaryColor.withOpacity(0.2),

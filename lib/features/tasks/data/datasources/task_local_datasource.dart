@@ -5,6 +5,8 @@ import '../models/task_model.dart';
 
 abstract class TaskLocalDataSource {
   Future<List<TaskModel>> getTasks();
+  Future<List<TaskModel>> getTasksByStatus(String userId, String status);
+  Future<List<TaskModel>> getExpiredTasks(String userId);
   Future<List<TaskModel>> searchTasks({
     required String query,
     List<String> searchFields = const ['title', 'description'],
@@ -31,6 +33,62 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
       return [];
     } catch (e) {
       throw LocalDatabaseException('Failed to fetch tasks: $e');
+    }
+  }
+
+  @override
+  Future<List<TaskModel>> getTasksByStatus(String userId, String status) async {
+    try {
+      final tasks = await database.taskDao.getTasksPaginated(
+        userId: userId,
+        limit: 10000,
+        offset: 0,
+        status: status,
+      );
+
+      final result = tasks
+          .map((e) => TaskModel.fromFirestore(_taskEntityToMap(e)))
+          .toList();
+
+      // Sort by due date ascending
+      result.sort((a, b) => a.dueDateTime.compareTo(b.dueDateTime));
+
+      return result;
+    } catch (e) {
+      throw LocalDatabaseException('Failed to fetch tasks by status: $e');
+    }
+  }
+
+  @override
+  Future<List<TaskModel>> getExpiredTasks(String userId) async {
+    try {
+      final now = DateTime.now();
+
+      // Get all tasks for the user
+      final allTasks = await database.taskDao.getTasksPaginated(
+        userId: userId,
+        limit: 10000,
+        offset: 0,
+      );
+
+      // Filter for expired tasks (non-completed tasks past due date)
+      final expiredTasks = allTasks.where((taskEntity) {
+        final isPending =
+            taskEntity.status == 'pending' || taskEntity.status == 'checked_in';
+        final isPastDue = taskEntity.dueDateTime.isBefore(now);
+        return isPending && isPastDue;
+      }).toList();
+
+      final result = expiredTasks
+          .map((e) => TaskModel.fromFirestore(_taskEntityToMap(e)))
+          .toList();
+
+      // Sort by due date descending (most overdue first)
+      result.sort((a, b) => a.dueDateTime.compareTo(b.dueDateTime));
+
+      return result;
+    } catch (e) {
+      throw LocalDatabaseException('Failed to fetch expired tasks: $e');
     }
   }
 

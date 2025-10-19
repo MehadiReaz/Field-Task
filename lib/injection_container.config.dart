@@ -62,8 +62,10 @@ import 'features/tasks/domain/usecases/complete_task.dart' as _i202;
 import 'features/tasks/domain/usecases/create_task.dart' as _i483;
 import 'features/tasks/domain/usecases/delete_task.dart' as _i335;
 import 'features/tasks/domain/usecases/filter_tasks.dart' as _i690;
+import 'features/tasks/domain/usecases/get_expired_tasks.dart' as _i27;
 import 'features/tasks/domain/usecases/get_task_by_id.dart' as _i869;
 import 'features/tasks/domain/usecases/get_tasks.dart' as _i441;
+import 'features/tasks/domain/usecases/get_tasks_by_status.dart' as _i976;
 import 'features/tasks/domain/usecases/get_tasks_page.dart' as _i968;
 import 'features/tasks/domain/usecases/search_tasks.dart' as _i175;
 import 'features/tasks/domain/usecases/update_task.dart' as _i184;
@@ -82,6 +84,8 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     final registerModule = _$RegisterModule();
+    gh.lazySingleton<_i524.ConnectivityService>(
+        () => _i524.ConnectivityService());
     gh.lazySingleton<_i59.FirebaseAuth>(() => registerModule.firebaseAuth);
     gh.lazySingleton<_i974.FirebaseFirestore>(
         () => registerModule.firebaseFirestore);
@@ -94,8 +98,6 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i558.FlutterSecureStorage>(
         () => registerModule.secureStorage);
-    gh.lazySingleton<_i524.ConnectivityService>(
-        () => _i524.ConnectivityService());
     gh.lazySingleton<_i942.LocationDataSource>(
         () => _i942.LocationDataSourceImpl());
     gh.lazySingleton<_i55.LocationRepository>(
@@ -169,6 +171,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i872.SignOut(gh<_i1015.AuthRepository>()));
     gh.lazySingleton<_i250.UpdateUserArea>(
         () => _i250.UpdateUserArea(gh<_i1015.AuthRepository>()));
+    gh.factory<_i797.CheckoutTask>(
+        () => _i797.CheckoutTask(gh<_i356.TaskRepository>()));
     gh.factory<_i754.CheckInTask>(
         () => _i754.CheckInTask(gh<_i356.TaskRepository>()));
     gh.factory<_i202.CompleteTask>(
@@ -189,20 +193,10 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i175.SearchTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i184.UpdateTask>(
         () => _i184.UpdateTask(gh<_i356.TaskRepository>()));
-    gh.factory<_i797.CheckoutTask>(
-        () => _i797.CheckoutTask(gh<_i356.TaskRepository>()));
-    gh.factory<_i1006.TaskBloc>(() => _i1006.TaskBloc(
-          getTasks: gh<_i441.GetTasks>(),
-          getTasksPage: gh<_i968.GetTasksPage>(),
-          getTaskById: gh<_i869.GetTaskById>(),
-          createTask: gh<_i483.CreateTask>(),
-          updateTask: gh<_i184.UpdateTask>(),
-          deleteTask: gh<_i335.DeleteTask>(),
-          checkInTask: gh<_i754.CheckInTask>(),
-          checkoutTask: gh<_i797.CheckoutTask>(),
-          completeTask: gh<_i202.CompleteTask>(),
-          searchTasks: gh<_i175.SearchTasks>(),
-        ));
+    gh.lazySingleton<_i27.GetExpiredTasks>(
+        () => _i27.GetExpiredTasks(gh<_i356.TaskRepository>()));
+    gh.lazySingleton<_i976.GetTasksByStatus>(
+        () => _i976.GetTasksByStatus(gh<_i356.TaskRepository>()));
     gh.factory<_i508.AreaBloc>(() => _i508.AreaBloc(
           getAreas: gh<_i780.GetAreas>(),
           getAreaById: gh<_i973.GetAreaById>(),
@@ -217,6 +211,20 @@ extension GetItInjectableX on _i174.GetIt {
           signOut: gh<_i872.SignOut>(),
           getCurrentUser: gh<_i191.GetCurrentUser>(),
           checkAuthStatus: gh<_i818.CheckAuthStatus>(),
+        ));
+    gh.factory<_i1006.TaskBloc>(() => _i1006.TaskBloc(
+          getTasks: gh<_i441.GetTasks>(),
+          getTasksPage: gh<_i968.GetTasksPage>(),
+          getTasksByStatus: gh<_i976.GetTasksByStatus>(),
+          getExpiredTasks: gh<_i27.GetExpiredTasks>(),
+          getTaskById: gh<_i869.GetTaskById>(),
+          createTask: gh<_i483.CreateTask>(),
+          updateTask: gh<_i184.UpdateTask>(),
+          deleteTask: gh<_i335.DeleteTask>(),
+          checkInTask: gh<_i754.CheckInTask>(),
+          checkoutTask: gh<_i797.CheckoutTask>(),
+          completeTask: gh<_i202.CompleteTask>(),
+          searchTasks: gh<_i175.SearchTasks>(),
         ));
     return this;
   }

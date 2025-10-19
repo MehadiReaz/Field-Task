@@ -14,6 +14,8 @@ abstract class TaskRemoteDataSource {
     String? status,
     bool showExpiredOnly = false,
   });
+  Future<List<TaskModel>> getTasksByStatus(String status);
+  Future<List<TaskModel>> getExpiredTasks();
   Future<List<TaskModel>> searchTasks({
     required String query,
     List<String> searchFields = const ['title', 'description'],
@@ -469,6 +471,52 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     return firestore.collection('tasks').doc(id).snapshots().map(
           (doc) => doc.exists ? TaskModel.fromFirestore(doc.data()!) : null,
         );
+  }
+
+  @override
+  Future<List<TaskModel>> getTasksByStatus(String status) async {
+    try {
+      final userId = _currentUserId;
+
+      final snapshot = await firestore
+          .collection('tasks')
+          .where('assignedTo', isEqualTo: userId)
+          .where('status', isEqualTo: status)
+          .orderBy('dueDate', descending: false)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => TaskModel.fromFirestore(doc.data()))
+          .toList();
+    } catch (e) {
+      throw FirestoreException('Failed to get tasks by status: $e');
+    }
+  }
+
+  @override
+  Future<List<TaskModel>> getExpiredTasks() async {
+    try {
+      final userId = _currentUserId;
+      final now = DateTime.now();
+
+      // Get all non-completed tasks
+      final snapshot = await firestore
+          .collection('tasks')
+          .where('assignedTo', isEqualTo: userId)
+          .where('status', whereIn: ['pending', 'checked_in'])
+          .orderBy('dueDate', descending: false)
+          .get();
+
+      // Filter expired tasks on the client side (due date has passed)
+      final expiredTasks = snapshot.docs
+          .map((doc) => TaskModel.fromFirestore(doc.data()))
+          .where((task) => task.dueDateTime.isBefore(now))
+          .toList();
+
+      return expiredTasks;
+    } catch (e) {
+      throw FirestoreException('Failed to get expired tasks: $e');
+    }
   }
 }
 
