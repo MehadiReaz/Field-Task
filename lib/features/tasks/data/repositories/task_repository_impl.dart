@@ -19,22 +19,56 @@ class TaskRepositoryImpl implements TaskRepository {
     required this.localDataSource,
   });
 
+  // Helper method to convert Task entity to TaskModel
+  TaskModel _toModel(Task task) {
+    return TaskModel(
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      dueDateTime: task.dueDateTime,
+      status: task.status,
+      priority: task.priority,
+      latitude: task.latitude,
+      longitude: task.longitude,
+      address: task.address,
+      assignedToId: task.assignedToId,
+      assignedToName: task.assignedToName,
+      createdById: task.createdById,
+      createdByName: task.createdByName,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      checkedInAt: task.checkedInAt,
+      completedAt: task.completedAt,
+      photoUrls: task.photoUrls,
+      checkInPhotoUrl: task.checkInPhotoUrl,
+      completionPhotoUrl: task.completionPhotoUrl,
+      syncStatus: task.syncStatus,
+      completionNotes: task.completionNotes,
+      metadata: task.metadata,
+    );
+  }
+
+  // Helper method to cache task locally (non-blocking)
+  Future<void> _cacheTaskSilently(TaskModel task) async {
+    try {
+      await localDataSource.saveTask(task);
+    } catch (_) {
+      // Silently ignore cache failures
+    }
+  }
+
   @override
   Future<Either<Failure, List<Task>>> getTasks() async {
     try {
       final tasks = await remoteDataSource.getTasks();
-      // Cache locally
+
+      // Cache tasks in background without blocking
       for (final task in tasks) {
-        try {
-          await localDataSource.saveTask(task);
-        } catch (e) {
-          // Log but don't fail - local cache is secondary
-          print('⚠️ Warning: Failed to cache task locally: $e');
-        }
+        _cacheTaskSilently(task);
       }
+
       return Right(tasks);
     } catch (e) {
-      print('❌ Error in getTasks: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -43,25 +77,23 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<Either<Failure, TaskPage>> getTasksPage({
     DocumentSnapshot? lastDocument,
     int pageSize = 10,
+    String? status,
+    bool showExpiredOnly = false,
   }) async {
     try {
       final pageModel = await remoteDataSource.getTasksPage(
         lastDocument: lastDocument,
         pageSize: pageSize,
+        status: status,
+        showExpiredOnly: showExpiredOnly,
       );
 
-      // Convert to domain model
-      final tasks = pageModel.tasks.map((model) => model.toEntity()).toList();
-
-      final taskPage = TaskPage(
-        tasks: tasks,
+      return Right(TaskPage(
+        tasks: pageModel.tasks,
         hasMore: pageModel.hasMore,
         lastDocument: pageModel.lastDocument,
-      );
-
-      return Right(taskPage);
+      ));
     } catch (e) {
-      print('❌ Error in getTasksPage: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -70,10 +102,9 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<Either<Failure, Task>> getTaskById(String id) async {
     try {
       final task = await remoteDataSource.getTaskById(id);
-      await localDataSource.saveTask(task);
+      await _cacheTaskSilently(task);
       return Right(task);
     } catch (e) {
-      print('❌ Error in getTaskById: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -81,42 +112,10 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, Task>> createTask(Task task) async {
     try {
-      final taskModel = TaskModel(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        dueDateTime: task.dueDateTime,
-        status: task.status,
-        priority: task.priority,
-        latitude: task.latitude,
-        longitude: task.longitude,
-        address: task.address,
-        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
-        assignedToId: task.assignedToId,
-        assignedToName: task.assignedToName,
-        createdById: task.createdById,
-        createdByName: task.createdByName,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        checkedInAt: task.checkedInAt,
-        completedAt: task.completedAt,
-        photoUrls: task.photoUrls,
-        checkInPhotoUrl: task.checkInPhotoUrl,
-        completionPhotoUrl: task.completionPhotoUrl,
-        syncStatus: task.syncStatus,
-        completionNotes: task.completionNotes,
-        metadata: task.metadata,
-      );
-      final createdTask = await remoteDataSource.createTask(taskModel);
-      try {
-        await localDataSource.saveTask(createdTask);
-      } catch (e) {
-        // Log but don't fail - local cache is secondary
-        print('⚠️ Warning: Failed to cache task locally: $e');
-      }
+      final createdTask = await remoteDataSource.createTask(_toModel(task));
+      await _cacheTaskSilently(createdTask);
       return Right(createdTask);
     } catch (e) {
-      print('❌ Error in createTask: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -124,37 +123,17 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, Task>> updateTask(Task task) async {
     try {
-      final taskModel = TaskModel(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        dueDateTime: task.dueDateTime,
-        status: task.status,
-        priority: task.priority,
-        latitude: task.latitude,
-        longitude: task.longitude,
-        address: task.address,
-        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
-        assignedToId: task.assignedToId,
-        assignedToName: task.assignedToName,
-        createdById: task.createdById,
-        createdByName: task.createdByName,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        checkedInAt: task.checkedInAt,
-        completedAt: task.completedAt,
-        photoUrls: task.photoUrls,
-        checkInPhotoUrl: task.checkInPhotoUrl,
-        completionPhotoUrl: task.completionPhotoUrl,
-        syncStatus: task.syncStatus,
-        completionNotes: task.completionNotes,
-        metadata: task.metadata,
-      );
-      final updatedTask = await remoteDataSource.updateTask(taskModel);
-      await localDataSource.updateTask(updatedTask);
+      final updatedTask = await remoteDataSource.updateTask(_toModel(task));
+
+      try {
+        await localDataSource.updateTask(updatedTask);
+      } catch (_) {
+        // Cache update failure is non-critical
+      }
+
       return Right(updatedTask);
     } catch (e) {
-      return Left(const TaskUpdateFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -162,10 +141,16 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<Either<Failure, void>> deleteTask(String id) async {
     try {
       await remoteDataSource.deleteTask(id);
-      await localDataSource.deleteTask(id);
-      return const Right(null);
+
+      try {
+        await localDataSource.deleteTask(id);
+      } catch (_) {
+        // Cache deletion failure is non-critical
+      }
+
+      return Right(null);
     } catch (e) {
-      return Left(const TaskDeleteFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -177,12 +162,22 @@ class TaskRepositoryImpl implements TaskRepository {
     String? photoUrl,
   ) async {
     try {
-      final task =
-          await remoteDataSource.checkInTask(id, latitude, longitude, photoUrl);
-      await localDataSource.updateTask(task);
+      final task = await remoteDataSource.checkInTask(
+        id,
+        latitude,
+        longitude,
+        photoUrl,
+      );
+
+      try {
+        await localDataSource.updateTask(task);
+      } catch (_) {
+        // Cache update failure is non-critical
+      }
+
       return Right(task);
     } catch (e) {
-      return Left(const ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -190,10 +185,16 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<Either<Failure, Task>> checkoutTask(String id) async {
     try {
       final task = await remoteDataSource.checkoutTask(id);
-      await localDataSource.updateTask(task);
+
+      try {
+        await localDataSource.updateTask(task);
+      } catch (_) {
+        // Cache update failure is non-critical
+      }
+
       return Right(task);
     } catch (e) {
-      return const Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -204,12 +205,21 @@ class TaskRepositoryImpl implements TaskRepository {
     String? photoUrl,
   ) async {
     try {
-      final task =
-          await remoteDataSource.completeTask(id, completionNotes, photoUrl);
-      await localDataSource.updateTask(task);
+      final task = await remoteDataSource.completeTask(
+        id,
+        completionNotes,
+        photoUrl,
+      );
+
+      try {
+        await localDataSource.updateTask(task);
+      } catch (_) {
+        // Cache update failure is non-critical
+      }
+
       return Right(task);
     } catch (e) {
-      return Left(const ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -225,7 +235,6 @@ class TaskRepositoryImpl implements TaskRepository {
       );
       return Right(tasks);
     } catch (e) {
-      print('❌ Error in searchTasks: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -242,7 +251,6 @@ class TaskRepositoryImpl implements TaskRepository {
       );
       return Right(tasks);
     } catch (e) {
-      print('❌ Error in searchTasksLocal: $e');
       return Left(ServerFailure(e.toString()));
     }
   }

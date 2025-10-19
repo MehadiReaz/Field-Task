@@ -11,6 +11,8 @@ abstract class TaskRemoteDataSource {
   Future<TaskPageModel> getTasksPage({
     DocumentSnapshot? lastDocument,
     int pageSize = 4,
+    String? status,
+    bool showExpiredOnly = false,
   });
   Future<List<TaskModel>> searchTasks({
     required String query,
@@ -43,71 +45,51 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
 
   TaskRemoteDataSourceImpl(this.firestore, this.firebaseAuth);
 
+  String get _currentUserId {
+    final user = firebaseAuth.currentUser;
+    if (user == null) throw const FirestoreException('User not authenticated');
+    return user.uid;
+  }
+
+  Future<List<TaskModel>> _fetchAndDeduplicateTasks({
+    List<String>? statusFilter,
+  }) async {
+    final userId = _currentUserId;
+
+    var assignedQuery =
+        firestore.collection('tasks').where('assignedTo', isEqualTo: userId);
+
+    var createdQuery =
+        firestore.collection('tasks').where('createdBy', isEqualTo: userId);
+
+    if (statusFilter != null) {
+      assignedQuery = assignedQuery.where('status', whereIn: statusFilter);
+      createdQuery = createdQuery.where('status', whereIn: statusFilter);
+    }
+
+    final results = await Future.wait([
+      assignedQuery.get(),
+      createdQuery.get(),
+    ]);
+
+    final tasksMap = <String, TaskModel>{};
+
+    for (final snapshot in results) {
+      for (final doc in snapshot.docs) {
+        final task = TaskModel.fromFirestore(doc.data());
+        tasksMap[task.id] = task;
+      }
+    }
+
+    return tasksMap.values.toList();
+  }
+
   @override
   Future<List<TaskModel>> getTasks() async {
     try {
-      final currentUser = firebaseAuth.currentUser;
-      if (currentUser == null) {
-        throw const FirestoreException('User not authenticated');
-      }
-
-      /* COMMENTED OUT: Area concept not used in this project
-      // Get user's selected area
-      final userDoc =
-          await firestore.collection('users').doc(currentUser.uid).get();
-      final selectedAreaId = userDoc.data()?['selectedAreaId'] as String?;
-
-      // If no area selected, return empty list
-      if (selectedAreaId == null) {
-        print('⚠️ User has no selected area');
-        return [];
-      }
-      */
-
-      // Query tasks assigned to the current user
-      final assignedSnapshot = await firestore
-          .collection('tasks')
-          .where('assignedTo', isEqualTo: currentUser.uid)
-          // .where('areaId', isEqualTo: selectedAreaId) // COMMENTED OUT
-          .get();
-
-      // Query tasks created by the current user
-      final createdSnapshot = await firestore
-          .collection('tasks')
-          .where('createdBy', isEqualTo: currentUser.uid)
-          // .where('areaId', isEqualTo: selectedAreaId) // COMMENTED OUT
-          .get();
-
-      // Combine and deduplicate tasks
-      final tasksMap = <String, TaskModel>{};
-
-      for (final doc in assignedSnapshot.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-      }
-
-      for (final doc in createdSnapshot.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-      }
-
-      // Filter out checked-out, completed, and cancelled tasks
-      // Also move expired tasks (past due date and not completed) to archived state
-      final activeTasks = tasksMap.values.where((task) {
-        // Exclude checked-out, completed, and cancelled tasks
-        if (task.status == TaskStatus.checkedOut ||
-            task.status == TaskStatus.completed ||
-            task.status == TaskStatus.cancelled) {
-          return false;
-        }
-
-        // Include all active tasks (pending and checked-in)
-        return true;
-      }).toList();
-
-      print(
-          '✅ Fetched ${tasksMap.length} total tasks, ${activeTasks.length} active tasks');
-      return activeTasks;
+      return await _fetchAndDeduplicateTasks(
+        statusFilter: ['pending', 'checkedIn'],
+      );
     } catch (e) {
       throw FirestoreException('Failed to fetch tasks: $e');
     }
@@ -117,96 +99,66 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   Future<TaskPageModel> getTasksPage({
     DocumentSnapshot? lastDocument,
     int pageSize = 4,
+    String? status,
+    bool showExpiredOnly = false,
   }) async {
     try {
-      final currentUser = firebaseAuth.currentUser;
-      if (currentUser == null) {
-        throw const FirestoreException('User not authenticated');
+      final allTasks = await _fetchAndDeduplicateTasks();
+
+      // Apply filters
+      List<TaskModel> filteredTasks = allTasks;
+
+      if (showExpiredOnly ||
+          (status != null && status.toLowerCase() == 'expired')) {
+        final now = DateTime.now();
+        filteredTasks = allTasks.where((task) {
+          return task.dueDateTime.isBefore(now) &&
+              task.status != TaskStatus.completed;
+        }).toList();
+      } else if (status != null && status.isNotEmpty) {
+        filteredTasks = allTasks.where((task) {
+          return task.status.value.toLowerCase() == status.toLowerCase();
+        }).toList();
+      } else {
+        // Default: show active tasks only
+        filteredTasks = allTasks.where((task) {
+          return task.status != TaskStatus.checkedOut &&
+              task.status != TaskStatus.completed &&
+              task.status != TaskStatus.cancelled;
+        }).toList();
       }
 
-      // Fetch assigned tasks
-      final assignedSnapshot = await firestore
-          .collection('tasks')
-          .where('assignedTo', isEqualTo: currentUser.uid)
-          .get();
+      // Sort by createdAt descending
+      filteredTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      // Fetch created tasks
-      final createdSnapshot = await firestore
-          .collection('tasks')
-          .where('createdBy', isEqualTo: currentUser.uid)
-          .get();
-
-      // Combine and deduplicate tasks
-      final tasksMap = <String, TaskModel>{};
-      final allTasks = <TaskModel>[];
-
-      for (final doc in assignedSnapshot.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-        allTasks.add(task);
-      }
-
-      for (final doc in createdSnapshot.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        if (!tasksMap.containsKey(task.id)) {
-          tasksMap[task.id] = task;
-          allTasks.add(task);
-        }
-      }
-
-      // Filter out checked-out, completed, and cancelled tasks
-      final activeTasks = allTasks.where((task) {
-        return task.status != TaskStatus.checkedOut &&
-            task.status != TaskStatus.completed &&
-            task.status != TaskStatus.cancelled;
-      }).toList();
-
-      // Sort by createdAt descending (client-side until index is ready)
-      activeTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      // Apply cursor-based pagination client-side
+      // Apply pagination
       int startIndex = 0;
       if (lastDocument != null) {
-        // Find the last document's ID in our list
         final lastDocId = lastDocument.id;
-        startIndex = activeTasks.indexWhere((task) => task.id == lastDocId);
-        if (startIndex >= 0) {
-          startIndex += 1; // Start after the last document
-        } else {
-          startIndex = 0; // If not found, start from beginning
+        final foundIndex =
+            filteredTasks.indexWhere((task) => task.id == lastDocId);
+        if (foundIndex >= 0) {
+          startIndex = foundIndex + 1;
         }
       }
 
-      // Get the page
-      final endIndex = (startIndex + pageSize).clamp(0, activeTasks.length);
-      final pageTasks = activeTasks.sublist(startIndex, endIndex);
+      final endIndex = (startIndex + pageSize).clamp(0, filteredTasks.length);
+      final pageTasks = filteredTasks.sublist(startIndex, endIndex);
 
-      // Determine the last document for next page
+      // Get last document for next page
       DocumentSnapshot? nextLastDocument;
-      if (pageTasks.isNotEmpty && endIndex < activeTasks.length) {
-        // Get the Firestore document for the last task in this page
+      if (pageTasks.isNotEmpty && endIndex < filteredTasks.length) {
         final lastTaskId = pageTasks.last.id;
-        try {
-          nextLastDocument = await firestore
-              .collection('tasks')
-              .doc(lastTaskId)
-              .get()
-              .then((doc) => doc);
-        } catch (e) {
-          print('⚠️ Warning: Could not get last document snapshot: $e');
+        final doc = await firestore.collection('tasks').doc(lastTaskId).get();
+        if (doc.exists) {
+          nextLastDocument = doc;
         }
       }
-
-      // Determine if there are more items
-      final hasMore = endIndex < activeTasks.length;
-
-      print(
-          '✅ Fetched paginated tasks: ${pageTasks.length} items (hasMore: $hasMore)');
 
       return TaskPageModel(
         tasks: pageTasks,
         lastDocument: nextLastDocument,
-        hasMore: hasMore,
+        hasMore: endIndex < filteredTasks.length,
       );
     } catch (e) {
       throw FirestoreException('Failed to fetch paginated tasks: $e');
@@ -219,65 +171,12 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     List<String> searchFields = const ['title', 'description'],
   }) async {
     try {
-      final currentUser = firebaseAuth.currentUser;
-      if (currentUser == null) {
-        throw const FirestoreException('User not authenticated');
-      }
-
-      // Fetch assigned tasks
-      final assignedSnapshot = await firestore
-          .collection('tasks')
-          .where('assignedTo', isEqualTo: currentUser.uid)
-          .get();
-
-      // Fetch created tasks
-      final createdSnapshot = await firestore
-          .collection('tasks')
-          .where('createdBy', isEqualTo: currentUser.uid)
-          .get();
-
-      // Combine and deduplicate
-      final tasksMap = <String, TaskModel>{};
-      final allTasks = <TaskModel>[];
-
-      for (final doc in assignedSnapshot.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-        allTasks.add(task);
-      }
-
-      for (final doc in createdSnapshot.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        if (!tasksMap.containsKey(task.id)) {
-          tasksMap[task.id] = task;
-          allTasks.add(task);
-        }
-      }
-
-      // Filter by search query (case-insensitive)
+      final allTasks = await _fetchAndDeduplicateTasks();
       final queryLower = query.toLowerCase();
+
       final filteredTasks = allTasks.where((task) {
         for (final field in searchFields) {
-          String? fieldValue;
-
-          switch (field.toLowerCase()) {
-            case 'title':
-              fieldValue = task.title;
-              break;
-            case 'description':
-              fieldValue = task.description;
-              break;
-            case 'address':
-              fieldValue = task.address;
-              break;
-            case 'assignedtoname':
-              fieldValue = task.assignedToName;
-              break;
-            case 'status':
-              fieldValue = task.status.value;
-              break;
-          }
-
+          final fieldValue = _getFieldValue(task, field);
           if (fieldValue != null &&
               fieldValue.toLowerCase().contains(queryLower)) {
             return true;
@@ -286,13 +185,27 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         return false;
       }).toList();
 
-      // Sort by createdAt descending
       filteredTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      print('✅ Found ${filteredTasks.length} tasks matching "$query"');
       return filteredTasks;
     } catch (e) {
       throw FirestoreException('Failed to search tasks: $e');
+    }
+  }
+
+  String? _getFieldValue(TaskModel task, String field) {
+    switch (field.toLowerCase()) {
+      case 'title':
+        return task.title;
+      case 'description':
+        return task.description;
+      case 'address':
+        return task.address;
+      case 'assignedtoname':
+        return task.assignedToName;
+      case 'status':
+        return task.status.value;
+      default:
+        return null;
     }
   }
 
@@ -313,6 +226,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   Future<TaskModel> createTask(TaskModel task) async {
     try {
       final docRef = firestore.collection('tasks').doc();
+      final now = DateTime.now();
+
       final taskWithId = TaskModel(
         id: docRef.id,
         title: task.title,
@@ -323,13 +238,12 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
-        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
         createdByName: task.createdByName,
         createdAt: task.createdAt,
-        updatedAt: DateTime.now(),
+        updatedAt: now,
         checkedInAt: task.checkedInAt,
         completedAt: task.completedAt,
         photoUrls: task.photoUrls,
@@ -350,9 +264,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   @override
   Future<TaskModel> updateTask(TaskModel task) async {
     try {
+      final now = DateTime.now();
       await firestore.collection('tasks').doc(task.id).update(
-            task.toFirestore()
-              ..['updatedAt'] = DateTime.now().toIso8601String(),
+            task.toFirestore()..['updatedAt'] = now.toIso8601String(),
           );
       return task;
     } catch (e) {
@@ -377,30 +291,26 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     String? photoUrl,
   ) async {
     try {
-      final doc = await firestore.collection('tasks').doc(id).get();
-      if (!doc.exists) {
-        throw const FirestoreException('Task not found');
-      }
+      final task = await getTaskById(id);
+      final now = DateTime.now();
 
-      final task = TaskModel.fromFirestore(doc.data()!);
       final updatedTask = TaskModel(
         id: task.id,
         title: task.title,
         description: task.description,
         dueDateTime: task.dueDateTime,
-        status: task.status,
+        status: TaskStatus.checkedIn,
         priority: task.priority,
         latitude: latitude,
         longitude: longitude,
         address: task.address,
-        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
         createdByName: task.createdByName,
         createdAt: task.createdAt,
-        updatedAt: DateTime.now(),
-        checkedInAt: DateTime.now(),
+        updatedAt: now,
+        checkedInAt: now,
         completedAt: task.completedAt,
         photoUrls: task.photoUrls,
         checkInPhotoUrl: photoUrl,
@@ -411,8 +321,10 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       );
 
       await firestore.collection('tasks').doc(id).update(
-          updatedTask.toFirestore()
-            ..['updatedAt'] = DateTime.now().toIso8601String());
+            updatedTask.toFirestore()
+              ..['updatedAt'] = now.toIso8601String()
+              ..['checkedInAt'] = now.toIso8601String(),
+          );
 
       return updatedTask;
     } catch (e) {
@@ -423,12 +335,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   @override
   Future<TaskModel> checkoutTask(String id) async {
     try {
-      final doc = await firestore.collection('tasks').doc(id).get();
-      if (!doc.exists) {
-        throw const FirestoreException('Task not found');
-      }
+      final task = await getTaskById(id);
+      final now = DateTime.now();
 
-      final task = TaskModel.fromFirestore(doc.data()!);
       final updatedTask = TaskModel(
         id: task.id,
         title: task.title,
@@ -444,9 +353,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         createdById: task.createdById,
         createdByName: task.createdByName,
         createdAt: task.createdAt,
-        updatedAt: DateTime.now(),
+        updatedAt: now,
         checkedInAt: task.checkedInAt,
-        checkedOutAt: DateTime.now(),
+        checkedOutAt: now,
         completedAt: task.completedAt,
         photoUrls: task.photoUrls,
         checkInPhotoUrl: task.checkInPhotoUrl,
@@ -456,13 +365,11 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         metadata: task.metadata,
       );
 
-      await firestore
-          .collection('tasks')
-          .doc(id)
-          .update(updatedTask.toFirestore()
-            ..['status'] = TaskStatus.checkedOut.value
-            ..['checkedOutAt'] = DateTime.now().toIso8601String()
-            ..['updatedAt'] = DateTime.now().toIso8601String());
+      await firestore.collection('tasks').doc(id).update(
+            updatedTask.toFirestore()
+              ..['updatedAt'] = now.toIso8601String()
+              ..['checkedOutAt'] = now.toIso8601String(),
+          );
 
       return updatedTask;
     } catch (e) {
@@ -477,31 +384,27 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     String? photoUrl,
   ) async {
     try {
-      final doc = await firestore.collection('tasks').doc(id).get();
-      if (!doc.exists) {
-        throw const FirestoreException('Task not found');
-      }
+      final task = await getTaskById(id);
+      final now = DateTime.now();
 
-      final task = TaskModel.fromFirestore(doc.data()!);
       final updatedTask = TaskModel(
         id: task.id,
         title: task.title,
         description: task.description,
         dueDateTime: task.dueDateTime,
-        status: task.status,
+        status: TaskStatus.completed,
         priority: task.priority,
         latitude: task.latitude,
         longitude: task.longitude,
         address: task.address,
-        // areaId: task.areaId, // COMMENTED OUT: Not used in this project
         assignedToId: task.assignedToId,
         assignedToName: task.assignedToName,
         createdById: task.createdById,
         createdByName: task.createdByName,
         createdAt: task.createdAt,
-        updatedAt: DateTime.now(),
+        updatedAt: now,
         checkedInAt: task.checkedInAt,
-        completedAt: DateTime.now(),
+        completedAt: now,
         photoUrls: task.photoUrls,
         checkInPhotoUrl: task.checkInPhotoUrl,
         completionPhotoUrl: photoUrl,
@@ -511,8 +414,10 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       );
 
       await firestore.collection('tasks').doc(id).update(
-          updatedTask.toFirestore()
-            ..['updatedAt'] = DateTime.now().toIso8601String());
+            updatedTask.toFirestore()
+              ..['updatedAt'] = now.toIso8601String()
+              ..['completedAt'] = now.toIso8601String(),
+          );
 
       return updatedTask;
     } catch (e) {
@@ -522,64 +427,41 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
 
   @override
   Stream<List<TaskModel>> watchTasks() {
-    final currentUser = firebaseAuth.currentUser;
-    if (currentUser == null) {
-      return Stream.error(const FirestoreException('User not authenticated'));
-    }
+    try {
+      final userId = _currentUserId;
 
-    /* COMMENTED OUT: Area concept not used in this project
-    // Get user's selected area and watch for changes
-    return firestore
-        .collection('users')
-        .doc(currentUser.uid)
-        .snapshots()
-        .asyncExpand((userDoc) {
-      final selectedAreaId = userDoc.data()?['selectedAreaId'] as String?;
+      final assignedStream = firestore
+          .collection('tasks')
+          .where('assignedTo', isEqualTo: userId)
+          .snapshots();
 
-      // If no area selected, return empty stream
-      if (selectedAreaId == null) {
-        print('⚠️ User has no selected area for watching tasks');
-        return Stream.value(<TaskModel>[]);
-      }
-    */
+      final createdStream = firestore
+          .collection('tasks')
+          .where('createdBy', isEqualTo: userId)
+          .snapshots();
 
-    // Watch tasks assigned to the current user
-    final assignedStream = firestore
-        .collection('tasks')
-        .where('assignedTo', isEqualTo: currentUser.uid)
-        // .where('areaId', isEqualTo: selectedAreaId) // COMMENTED OUT
-        .snapshots();
-
-    // Watch tasks created by the current user
-    final createdStream = firestore
-        .collection('tasks')
-        .where('createdBy', isEqualTo: currentUser.uid)
-        // .where('areaId', isEqualTo: selectedAreaId) // COMMENTED OUT
-        .snapshots();
-
-    // Combine both streams
-    return Rx.combineLatest2(assignedStream, createdStream,
+      return Rx.combineLatest2(
+        assignedStream,
+        createdStream,
         (assigned, created) {
-      final tasksMap = <String, TaskModel>{};
+          final tasksMap = <String, TaskModel>{};
 
-      // Add assigned tasks
-      for (final doc in assigned.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-      }
+          for (final doc in assigned.docs) {
+            final task = TaskModel.fromFirestore(doc.data());
+            tasksMap[task.id] = task;
+          }
 
-      // Add created tasks (overwrites if same ID)
-      for (final doc in created.docs) {
-        final task = TaskModel.fromFirestore(doc.data());
-        tasksMap[task.id] = task;
-      }
+          for (final doc in created.docs) {
+            final task = TaskModel.fromFirestore(doc.data());
+            tasksMap[task.id] = task;
+          }
 
-      print('✅ Watching ${tasksMap.length} tasks');
-      return tasksMap.values.toList();
-    });
-    /* COMMENTED OUT: Area concept not used in this project
-    });
-    */
+          return tasksMap.values.toList();
+        },
+      );
+    } catch (e) {
+      return Stream.error(FirestoreException('Failed to watch tasks: $e'));
+    }
   }
 
   @override
@@ -596,5 +478,5 @@ class FirestoreException implements Exception {
   const FirestoreException(this.message);
 
   @override
-  String toString() => message;
+  String toString() => 'FirestoreException: $message';
 }

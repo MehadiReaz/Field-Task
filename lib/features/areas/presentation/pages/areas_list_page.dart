@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/area_bloc.dart';
-import '../../domain/entities/area.dart';
-import '../../../../core/utils/distance_calculator.dart';
-import 'create_area_page.dart';
 import '../../../../injection_container.dart';
-import '../../../location/presentation/bloc/location_bloc.dart';
+import '../../../tasks/presentation/bloc/task_bloc.dart';
+import '../../../tasks/presentation/bloc/task_event.dart';
+import '../../../tasks/presentation/bloc/task_state.dart';
+import '../../../tasks/domain/entities/task.dart';
+import '../../../tasks/presentation/widgets/task_card.dart';
+import '../../../tasks/presentation/pages/task_detail_page.dart';
 
 class AreasListPage extends StatefulWidget {
   const AreasListPage({super.key});
@@ -15,295 +16,265 @@ class AreasListPage extends StatefulWidget {
 }
 
 class _AreasListPageState extends State<AreasListPage> {
+  late ScrollController _scrollController;
+  String _currentFilter = 'completed';
+  late TaskBloc _taskBloc;
+
   @override
   void initState() {
     super.initState();
-    // Use post-frame callback to ensure context is ready
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<AreaBloc>().add(const LoadAreasEvent());
+    _scrollController = ScrollController();
+    // Initialize bloc early
+    _taskBloc = getIt<TaskBloc>()
+      ..add(const LoadMyTasksEvent(
+        status: 'completed',
+        showExpiredOnly: false,
+      ));
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final state = _taskBloc.state;
+
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.9) {
+      if (state is TasksLoaded && state.hasMore) {
+        _loadMoreWithCurrentFilter();
       }
+    }
+  }
+
+  void _loadMoreWithCurrentFilter() {
+    String? status;
+    bool showExpiredOnly = false;
+
+    if (_currentFilter == 'expired') {
+      status = 'expired';
+      showExpiredOnly = true;
+    } else if (_currentFilter != 'all') {
+      status = _currentFilter;
+    }
+
+    _taskBloc.add(LoadMoreTasksEvent(
+      status: status,
+      showExpiredOnly: showExpiredOnly,
+    ));
+  }
+
+  void _applyFilter(String filter) {
+    setState(() {
+      _currentFilter = filter;
     });
+
+    String? status;
+    bool showExpiredOnly = false;
+
+    if (filter == 'expired') {
+      status = 'expired';
+      showExpiredOnly = true;
+    } else if (filter != 'all') {
+      status = filter;
+    }
+
+    _taskBloc.add(LoadMyTasksEvent(
+      isRefresh: true,
+      status: status,
+      showExpiredOnly: showExpiredOnly,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Area Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              context.read<AreaBloc>().add(const LoadAreasEvent());
-            },
-          ),
-        ],
-      ),
-      body: BlocConsumer<AreaBloc, AreaState>(
-        listener: (context, state) {
-          if (state is AreaError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state is AreaDeleted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Area deleted successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            // Reload areas
-            context.read<AreaBloc>().add(const LoadAreasEvent());
-          }
-        },
-        builder: (context, state) {
-          if (state is AreaLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return BlocProvider.value(
+      value: _taskBloc,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Completed & Expired Tasks'),
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.filter_list),
+              onSelected: _applyFilter,
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'all',
+                  child: Text('All Tasks'),
+                ),
+                const PopupMenuItem(
+                  value: 'completed',
+                  child: Text('Completed'),
+                ),
+                const PopupMenuItem(
+                  value: 'expired',
+                  child: Text('Expired'),
+                ),
+              ],
+            ),
+          ],
+        ),
+        body: BlocConsumer<TaskBloc, TaskState>(
+          listener: (context, state) {
+            if (state is TaskError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            if (state is TaskLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (state is AreasLoaded) {
-            if (state.areas.isEmpty) {
+            if (state is TasksEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.location_off,
-                      size: 64,
+                      Icons.task_alt,
+                      size: 80,
                       color: Colors.grey[400],
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No areas found',
+                      'No tasks found',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: Colors.grey[600],
                           ),
                     ),
                     const SizedBox(height: 8),
-                    const Text('Tap the + button to create a new area'),
+                    Text(
+                      _currentFilter == 'completed'
+                          ? 'No completed tasks yet'
+                          : _currentFilter == 'expired'
+                              ? 'No expired tasks'
+                              : 'No tasks available',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[500],
+                          ),
+                    ),
                   ],
                 ),
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.areas.length,
-              itemBuilder: (context, index) {
-                final area = state.areas[index];
-                return _AreaCard(
-                  area: area,
-                  onTap: () => _navigateToEditArea(context, area),
-                  onDelete: () => _showDeleteConfirmation(context, area),
-                );
-              },
-            );
-          }
+            if (state is TasksLoaded || state is TaskRefreshing) {
+              final tasks = state is TasksLoaded
+                  ? state.tasks
+                  : (state as TaskRefreshing).currentTasks;
+              final hasMore = state is TasksLoaded
+                  ? state.hasMore
+                  : (state as TaskRefreshing).hasMore;
 
-          return const SizedBox.shrink();
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToCreateArea(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Area'),
-      ),
-    );
-  }
-
-  void _navigateToCreateArea(BuildContext context) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (_) => getIt<LocationBloc>(),
-            ),
-            BlocProvider(
-              create: (_) => getIt<AreaBloc>(),
-            ),
-          ],
-          child: const CreateAreaPage(),
-        ),
-      ),
-    );
-
-    if (result == true) {
-      if (mounted) {
-        context.read<AreaBloc>().add(const LoadAreasEvent());
-      }
-    }
-  }
-
-  void _navigateToEditArea(BuildContext context, Area area) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (_) => getIt<LocationBloc>(),
-            ),
-            BlocProvider(
-              create: (_) => getIt<AreaBloc>(),
-            ),
-          ],
-          child: CreateAreaPage(area: area),
-        ),
-      ),
-    );
-
-    if (result == true) {
-      if (mounted) {
-        context.read<AreaBloc>().add(const LoadAreasEvent());
-      }
-    }
-  }
-
-  void _showDeleteConfirmation(BuildContext context, Area area) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Area'),
-        content: Text('Are you sure you want to delete "${area.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AreaBloc>().add(DeleteAreaEvent(area.id));
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AreaCard extends StatelessWidget {
-  final Area area;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-
-  const _AreaCard({
-    required this.area,
-    required this.onTap,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      area.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: onDelete,
-                    tooltip: 'Delete Area',
-                  ),
-                ],
-              ),
-              if (area.description != null && area.description!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  area.description!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+              return RefreshIndicator(
+                onRefresh: () async {
+                  _applyFilter(_currentFilter);
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+                child: Column(
+                  children: [
+                    // Task count info
+                    if (tasks.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Showing ${tasks.length} task${tasks.length != 1 ? 's' : ''}${hasMore ? ' (more available)' : ''}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                            ),
+                            if (_currentFilter != 'all')
+                              Chip(
+                                label: Text(_currentFilter.toUpperCase()),
+                                backgroundColor: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.2),
+                                labelStyle: const TextStyle(fontSize: 12),
+                              ),
+                          ],
+                        ),
                       ),
+                    // Task list
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: tasks.length + (hasMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == tasks.length) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Loading more tasks...',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          final task = tasks[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: TaskCard(
+                              task: task,
+                              onTap: () => _navigateToTaskDetail(context, task),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 12),
-              _InfoRow(
-                icon: Icons.location_on,
-                label: 'Center',
-                value:
-                    '${area.centerLatitude.toStringAsFixed(6)}, ${area.centerLongitude.toStringAsFixed(6)}',
-              ),
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.radio_button_unchecked,
-                label: 'Radius',
-                value: DistanceCalculator.formatDistance(area.radiusInMeters),
-              ),
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.people,
-                label: 'Assigned Agents',
-                value: area.assignedAgentIds.isEmpty
-                    ? 'None'
-                    : '${area.assignedAgentIds.length} agent(s)',
-              ),
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.person,
-                label: 'Created by',
-                value: area.createdByName,
-              ),
-            ],
-          ),
+              );
+            }
+
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );
   }
-}
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ),
-      ],
+  void _navigateToTaskDetail(BuildContext context, Task task) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TaskDetailPage(taskId: task.id),
+      ),
     );
   }
 }

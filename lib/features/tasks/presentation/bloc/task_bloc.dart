@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dartz/dartz.dart' as dartz;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/usecases/usecase.dart';
@@ -12,6 +13,7 @@ import '../../domain/usecases/check_in_task.dart';
 import '../../domain/usecases/checkout_task.dart';
 import '../../domain/usecases/complete_task.dart';
 import '../../domain/usecases/search_tasks.dart';
+import '../../domain/entities/task.dart';
 import 'task_event.dart';
 import 'task_state.dart';
 
@@ -56,24 +58,36 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     on<ClearSearchEvent>(_onClearSearch);
   }
 
+  // Helper method to handle common task list result pattern
+  void _emitTaskListResult(
+    Emitter<TaskState> emit,
+    dartz.Either<dynamic, List<Task>> result,
+  ) {
+    result.fold(
+      (failure) => emit(TaskError(failure.message)),
+      (tasks) => emit(tasks.isEmpty ? const TasksEmpty() : TasksLoaded(tasks)),
+    );
+  }
+
+  // Helper method to handle operation success
+  void _emitOperationResult(
+    Emitter<TaskState> emit,
+    dartz.Either<dynamic, dynamic> result,
+    String successMessage,
+  ) {
+    result.fold(
+      (failure) => emit(TaskError(failure.message)),
+      (_) => emit(TaskOperationSuccess(successMessage)),
+    );
+  }
+
   Future<void> _onLoadTasks(
     LoadTasksEvent event,
     Emitter<TaskState> emit,
   ) async {
     emit(const TaskLoading());
-
-    final result = await getTasks(NoParams());
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (tasks) {
-        if (tasks.isEmpty) {
-          emit(const TasksEmpty());
-        } else {
-          emit(TasksLoaded(tasks));
-        }
-      },
-    );
+    final result = await getTasks(const NoParams());
+    _emitTaskListResult(emit, result);
   }
 
   Future<void> _onLoadTasksByStatus(
@@ -82,24 +96,24 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   ) async {
     emit(const TaskLoading());
 
-    // For now, get all tasks and filter client-side
-    // TODO: Add status filter to repository
-    final result = await getTasks(NoParams());
+    final result = await getTasksPage(GetTasksPageParams(
+      lastDocument: null,
+      pageSize: 10,
+      status: event.status,
+      showExpiredOnly: false,
+    ));
 
     result.fold(
       (failure) => emit(TaskError(failure.message)),
-      (allTasks) {
-        // Convert status string to TaskStatus enum for comparison
-        final filteredTasks = allTasks
-            .where((task) =>
-                task.status.value == event.status ||
-                task.status.toString().split('.').last == event.status)
-            .toList();
-
-        if (filteredTasks.isEmpty) {
+      (taskPage) {
+        if (taskPage.tasks.isEmpty) {
           emit(const TasksEmpty());
         } else {
-          emit(TasksLoaded(filteredTasks));
+          emit(TasksLoaded(
+            taskPage.tasks,
+            lastDocument: taskPage.lastDocument,
+            hasMore: taskPage.hasMore,
+          ));
         }
       },
     );
@@ -109,17 +123,15 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     LoadMyTasksEvent event,
     Emitter<TaskState> emit,
   ) async {
-    // If refreshing, reset pagination
-    if (event.isRefresh) {
-      emit(const TaskLoading());
-    } else if (state is! TasksLoaded) {
-      // If loading for the first time
+    if (event.isRefresh || state is! TasksLoaded) {
       emit(const TaskLoading());
     }
 
     final result = await getTasksPage(GetTasksPageParams(
-      lastDocument: null, // First page
+      lastDocument: null,
       pageSize: 10,
+      status: event.status,
+      showExpiredOnly: event.showExpiredOnly,
     ));
 
     result.fold(
@@ -142,30 +154,23 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     LoadMoreTasksEvent event,
     Emitter<TaskState> emit,
   ) async {
-    final currentState = state;
+    if (state is! TasksLoaded) return;
 
-    // Only load more if we're already in TasksLoaded state and hasMore is true
-    if (currentState is! TasksLoaded) return;
+    final currentState = state as TasksLoaded;
     if (!currentState.hasMore) return;
 
-    final currentTasks = currentState.tasks;
-    final lastDocument = currentState.lastDocument;
-
     final result = await getTasksPage(GetTasksPageParams(
-      lastDocument: lastDocument,
+      lastDocument: currentState.lastDocument,
       pageSize: 10,
+      status: event.status,
+      showExpiredOnly: event.showExpiredOnly,
     ));
 
     result.fold(
-      (failure) {
-        // Keep showing current tasks, just log the error
-        print('❌ Error loading more tasks: $failure');
-      },
+      (failure) => emit(TaskError(failure.message)),
       (taskPage) {
-        // Append new tasks to existing ones
-        final allTasks = [...currentTasks, ...taskPage.tasks];
         emit(TasksLoaded(
-          allTasks,
+          [...currentState.tasks, ...taskPage.tasks],
           lastDocument: taskPage.lastDocument,
           hasMore: taskPage.hasMore,
         ));
@@ -178,7 +183,6 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     Emitter<TaskState> emit,
   ) async {
     emit(const TaskLoading());
-
     final result = await getTaskById(GetTaskByIdParams(event.taskId));
 
     result.fold(
@@ -192,13 +196,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     Emitter<TaskState> emit,
   ) async {
     emit(const TaskLoading());
-
     final result = await createTask(CreateTaskParams(event.task));
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (_) => emit(const TaskOperationSuccess('Task created successfully')),
-    );
+    _emitOperationResult(emit, result, 'Task created successfully');
   }
 
   Future<void> _onUpdateTask(
@@ -206,13 +205,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     Emitter<TaskState> emit,
   ) async {
     emit(const TaskLoading());
-
     final result = await updateTask(UpdateTaskParams(event.task));
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (_) => emit(const TaskOperationSuccess('Task updated successfully')),
-    );
+    _emitOperationResult(emit, result, 'Task updated successfully');
   }
 
   Future<void> _onDeleteTask(
@@ -220,13 +214,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     Emitter<TaskState> emit,
   ) async {
     emit(const TaskLoading());
-
     final result = await deleteTask(DeleteTaskParams(event.taskId));
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (_) => emit(const TaskOperationSuccess('Task deleted successfully')),
-    );
+    _emitOperationResult(emit, result, 'Task deleted successfully');
   }
 
   Future<void> _onCheckInTask(
@@ -242,10 +231,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       photoUrl: event.photoUrl,
     ));
 
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (_) => emit(const TaskOperationSuccess('Checked in successfully')),
-    );
+    _emitOperationResult(emit, result, 'Checked in successfully');
   }
 
   Future<void> _onCheckoutTask(
@@ -253,13 +239,11 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     Emitter<TaskState> emit,
   ) async {
     emit(const TaskLoading());
-
     final result = await checkoutTask(CheckoutTaskParams(id: event.taskId));
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (_) => emit(const TaskOperationSuccess(
-          'Checked out successfully - task removed from list')),
+    _emitOperationResult(
+      emit,
+      result,
+      'Checked out successfully - task removed from list',
     );
   }
 
@@ -275,99 +259,44 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       photoUrl: event.photoUrl,
     ));
 
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (_) => emit(const TaskOperationSuccess('Task completed successfully')),
-    );
+    _emitOperationResult(emit, result, 'Task completed successfully');
   }
 
   Future<void> _onRefreshTasks(
     RefreshTasksEvent event,
     Emitter<TaskState> emit,
   ) async {
-    // Keep current tasks while refreshing
-    final currentTasks =
-        state is TasksLoaded ? (state as TasksLoaded).tasks : <dynamic>[];
+    if (state is TasksLoaded) {
+      emit(TaskRefreshing((state as TasksLoaded).tasks));
+    }
 
-    emit(TaskRefreshing(currentTasks.cast()));
-
-    final result = await getTasks(NoParams());
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (tasks) {
-        if (tasks.isEmpty) {
-          emit(const TasksEmpty());
-        } else {
-          emit(TasksLoaded(tasks));
-        }
-      },
-    );
+    final result = await getTasks(const NoParams());
+    _emitTaskListResult(emit, result);
   }
 
   Future<void> _onSearchTasks(
     SearchTasksEvent event,
     Emitter<TaskState> emit,
   ) async {
-    // If query is empty, just load all tasks
-    if (event.query.isEmpty) {
-      final result = await getTasks(NoParams());
-
-      result.fold(
-        (failure) => emit(TaskError(failure.message)),
-        (tasks) {
-          if (tasks.isEmpty) {
-            emit(const TasksEmpty());
-          } else {
-            emit(TasksLoaded(tasks));
-          }
-        },
-      );
-      return;
-    }
-
-    // Don't show loading if we already have tasks (for better UX during typing)
     if (state is! TasksLoaded) {
       emit(const TaskLoading());
     }
 
-    // Perform search
-    final result = await searchTasks(SearchTasksParams(
-      query: event.query,
-      searchFields: const ['title', 'description'],
-    ));
+    final result = event.query.isEmpty
+        ? await getTasks(const NoParams())
+        : await searchTasks(SearchTasksParams(
+            query: event.query,
+            searchFields: const ['title', 'description'],
+          ));
 
-    result.fold(
-      (failure) {
-        print('❌ Search failed: ${failure.message}');
-        emit(TaskError(failure.message));
-      },
-      (tasks) {
-        if (tasks.isEmpty) {
-          emit(const TasksEmpty());
-        } else {
-          emit(TasksLoaded(tasks));
-        }
-      },
-    );
+    _emitTaskListResult(emit, result);
   }
 
   Future<void> _onClearSearch(
     ClearSearchEvent event,
     Emitter<TaskState> emit,
   ) async {
-    // Just reload all tasks
-    final result = await getTasks(NoParams());
-
-    result.fold(
-      (failure) => emit(TaskError(failure.message)),
-      (tasks) {
-        if (tasks.isEmpty) {
-          emit(const TasksEmpty());
-        } else {
-          emit(TasksLoaded(tasks));
-        }
-      },
-    );
+    final result = await getTasks(const NoParams());
+    _emitTaskListResult(emit, result);
   }
 }

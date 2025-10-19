@@ -26,19 +26,31 @@ class LoadTasksByStatusEvent extends TaskEvent {
 /// Load tasks assigned to current user
 class LoadMyTasksEvent extends TaskEvent {
   final bool isRefresh;
+  final String? status; // e.g. 'completed', 'pending', etc.
+  final bool showExpiredOnly;
 
-  const LoadMyTasksEvent({this.isRefresh = false});
+  const LoadMyTasksEvent({
+    this.isRefresh = false,
+    this.status,
+    this.showExpiredOnly = false,
+  });
 
   @override
-  List<Object?> get props => [isRefresh];
+  List<Object?> get props => [isRefresh, status, showExpiredOnly];
 }
 
 /// Load more tasks (for pagination)
 class LoadMoreTasksEvent extends TaskEvent {
-  const LoadMoreTasksEvent();
+  final String? status;
+  final bool showExpiredOnly;
+
+  const LoadMoreTasksEvent({
+    this.status,
+    this.showExpiredOnly = false,
+  });
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [status, showExpiredOnly];
 }
 
 /// Load a specific task by ID

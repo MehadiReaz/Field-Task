@@ -9,6 +9,8 @@ abstract class TaskRepository {
   Future<Either<Failure, TaskPage>> getTasksPage({
     DocumentSnapshot? lastDocument,
     int pageSize = 10,
+    String? status,
+    bool showExpiredOnly = false,
   });
   Future<Either<Failure, List<Task>>> searchTasks({
     required String query,

@@ -25,12 +25,16 @@ class GetTasksPage implements UseCase<TaskPage, GetTasksPageParams> {
 class GetTasksPageParams extends Equatable {
   final DocumentSnapshot? lastDocument;
   final int pageSize;
+  final String? status;
+  final bool showExpiredOnly;
 
   const GetTasksPageParams({
     this.lastDocument,
     this.pageSize = 10,
+    this.status,
+    this.showExpiredOnly = false,
   });
 
   @override
-  List<Object?> get props => [lastDocument, pageSize];
+  List<Object?> get props => [lastDocument, pageSize, status, showExpiredOnly];
 }

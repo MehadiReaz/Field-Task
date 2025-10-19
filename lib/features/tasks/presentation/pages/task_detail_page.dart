@@ -29,7 +29,7 @@ class TaskDetailPage extends StatelessWidget {
 }
 
 class TaskDetailView extends StatelessWidget {
-  const TaskDetailView({Key? key}) : super(key: key);
+  const TaskDetailView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -72,12 +72,12 @@ class TaskDetailView extends StatelessWidget {
                 backgroundColor: Colors.green,
               ),
             );
-            // Reload task after operation
-            final currentState = context.read<TaskBloc>().state;
-            if (currentState is TaskLoaded) {
-              context
-                  .read<TaskBloc>()
-                  .add(LoadTaskByIdEvent(currentState.task.id));
+            // Always reload task after any operation success
+            final taskId = (context
+                .findAncestorWidgetOfExactType<TaskDetailPage>()
+                ?.taskId);
+            if (taskId != null) {
+              context.read<TaskBloc>().add(LoadTaskByIdEvent(taskId));
             }
           }
         },
@@ -594,26 +594,29 @@ class TaskDetailView extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Check In Button
-        if (task.status == TaskStatus.pending)
-          ElevatedButton.icon(
-            onPressed: () => _showCheckInDialog(context, task),
-            icon: const Icon(Icons.location_on),
-            label: const Text('Check In'),
-            style: ElevatedButton.styleFrom(
+    // If checked in, show slider to complete task, hide check-in button
+    if (task.status == TaskStatus.checkedIn) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Slider to complete task
+          Card(
+            elevation: 2,
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
+              child: Column(
+                children: [
+                  const Text('Slide to complete task',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  _CompleteTaskSlider(
+                      onComplete: () => _showCompleteDialog(context, task)),
+                ],
+              ),
             ),
           ),
-
-        const SizedBox(height: 12),
-
-        // Checkout Button (after checkin)
-        if (task.status == TaskStatus.checkedIn)
+          const SizedBox(height: 12),
+          // Checkout Button
           ElevatedButton.icon(
             onPressed: () => _showCheckoutDialog(context, task),
             icon: const Icon(Icons.logout),
@@ -624,221 +627,273 @@ class TaskDetailView extends StatelessWidget {
               foregroundColor: Colors.white,
             ),
           ),
+        ],
+      );
+    }
 
-        const SizedBox(height: 12),
+    // If pending, show check-in button
+    if (task.status == TaskStatus.pending) {
+      return ElevatedButton.icon(
+        onPressed: () => _showCheckInDialog(context, task),
+        icon: const Icon(Icons.location_on),
+        label: const Text('Check In'),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.all(16),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+      );
+    }
 
-        // Complete Button
-        if (task.status == TaskStatus.checkedIn)
-          ElevatedButton.icon(
-            onPressed: () => _showCompleteDialog(context, task),
-            icon: const Icon(Icons.check_circle),
-            label: const Text('Complete Task'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(16),
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
+    return const SizedBox.shrink();
+  }
+}
+
+// Slider widget for completing task
+
+// Slider widget for completing task
+class _CompleteTaskSlider extends StatefulWidget {
+  final VoidCallback onComplete;
+  const _CompleteTaskSlider({required this.onComplete, super.key});
+
+  @override
+  State<_CompleteTaskSlider> createState() => _CompleteTaskSliderState();
+}
+
+class _CompleteTaskSliderState extends State<_CompleteTaskSlider> {
+  double _sliderValue = 0;
+  bool _completed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Slider(
+          value: _sliderValue,
+          min: 0,
+          max: 100,
+          divisions: 100,
+          label: _completed ? 'Completed!' : '${_sliderValue.toInt()}%',
+          onChanged: _completed
+              ? null
+              : (value) {
+                  setState(() {
+                    _sliderValue = value;
+                  });
+                  if (value == 100 && !_completed) {
+                    setState(() {
+                      _completed = true;
+                    });
+                    Future.delayed(const Duration(milliseconds: 500), () {
+                      widget.onComplete();
+                    });
+                  }
+                },
+        ),
+        if (_completed)
+          const Text('Task completed!',
+              style:
+                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
       ],
     );
   }
+}
 
-  void _showCheckInDialog(BuildContext context, Task task) async {
-    // Get actual GPS location
-    try {
-      final position = await _getCurrentLocation();
-      if (position == null) {
-        if (context.mounted) {
-          _showLocationError(context, 'Unable to get current location');
-        }
-        return;
-      }
-
-      // Calculate distance from task location
-      final distance = _calculateDistance(
-        position.latitude,
-        position.longitude,
-        task.latitude,
-        task.longitude,
-      );
-
-      // Check if within range (100m)
-      if (distance > 100) {
-        if (context.mounted) {
-          _showLocationError(
-            context,
-            'You are ${distance.toStringAsFixed(0)}m away from the task location. You must be within 100m to check in.',
-          );
-        }
-        return;
-      }
-
+void _showCheckInDialog(BuildContext context, Task task) async {
+  // Get actual GPS location
+  try {
+    final position = await _getCurrentLocation();
+    if (position == null) {
       if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('Check In'),
-            content: Text(
-              'You are ${distance.toStringAsFixed(0)}m from the task location.\n\nAre you sure you want to check in to this task?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<TaskBloc>().add(CheckInTaskEvent(
-                        taskId: task.id,
-                        latitude: position.latitude,
-                        longitude: position.longitude,
-                        photoUrl: null,
-                        notes: 'Checked in via app',
-                      ));
-                  Navigator.pop(dialogContext);
-                },
-                child: const Text('Check In'),
-              ),
-            ],
-          ),
+        _showLocationError(context, 'Unable to get current location');
+      }
+      return;
+    }
+
+    // Calculate distance from task location
+    final distance = _calculateDistance(
+      position.latitude,
+      position.longitude,
+      task.latitude,
+      task.longitude,
+    );
+
+    // Check if within range (100m)
+    if (distance > 100) {
+      if (context.mounted) {
+        _showLocationError(
+          context,
+          'You are ${distance.toStringAsFixed(0)}m away from the task location. You must be within 100m to check in.',
         );
       }
-    } catch (e) {
-      if (context.mounted) {
-        _showLocationError(context, 'Error getting location: $e');
-      }
+      return;
     }
-  }
 
-  void _showCheckoutDialog(BuildContext context, Task task) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Check Out'),
-        content: const Text(
-          'Are you sure you want to check out?\n\nThis will remove the task from your active list.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Check In'),
+          content: Text(
+            'You are ${distance.toStringAsFixed(0)}m from the task location.\n\nAre you sure you want to check in to this task?',
           ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<TaskBloc>().add(CheckoutTaskEvent(task.id));
-              Navigator.pop(dialogContext);
-              // Go back to task list after checkout
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
-            child: const Text('Check Out'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCompleteDialog(BuildContext context, Task task) {
-    final notesController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Complete Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Add completion notes (optional):'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Enter notes...',
-                border: OutlineInputBorder(),
-              ),
+            ElevatedButton(
+              onPressed: () {
+                context.read<TaskBloc>().add(CheckInTaskEvent(
+                      taskId: task.id,
+                      latitude: position.latitude,
+                      longitude: position.longitude,
+                      photoUrl: null,
+                      notes: 'Checked in via app',
+                    ));
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Check In'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<TaskBloc>().add(CompleteTaskEvent(
-                    taskId: task.id,
-                    photoUrl: null,
-                    notes: notesController.text.isEmpty
-                        ? null
-                        : notesController.text,
-                  ));
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Complete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Get current GPS location
-  Future<Position?> _getCurrentLocation() async {
-    try {
-      return await LocationUtils.getCurrentPosition();
-    } catch (e) {
-      return null;
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      _showLocationError(context, 'Error getting location: $e');
     }
   }
+}
 
-  // Calculate distance between two points in meters
-  double _calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
-    return LocationUtils.calculateDistance(
-      startLatitude: lat1,
-      startLongitude: lon1,
-      endLatitude: lat2,
-      endLongitude: lon2,
-    );
-  }
-
-  void _showLocationError(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+void _showCheckoutDialog(BuildContext context, Task task) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Check Out'),
+      content: const Text(
+        'Are you sure you want to check out?\n\nThis will remove the task from your active list.',
       ),
-    );
-  }
-
-  Future<void> _navigateToEditTask(BuildContext context, Task task) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TaskFormPage(
-          taskId: task.id,
-          task: task,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
         ),
-      ),
-    );
+        ElevatedButton(
+          onPressed: () {
+            context.read<TaskBloc>().add(CheckoutTaskEvent(task.id));
+            Navigator.pop(dialogContext);
+            // Go back to task list after checkout
+            Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+          ),
+          child: const Text('Check Out'),
+        ),
+      ],
+    ),
+  );
+}
 
-    // Reload task if it was updated
-    if (result == true && context.mounted) {
-      context.read<TaskBloc>().add(LoadTaskByIdEvent(task.id));
-    }
+void _showCompleteDialog(BuildContext context, Task task) {
+  final notesController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Complete Task'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Add completion notes (optional):'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: notesController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Enter notes...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            context.read<TaskBloc>().add(CompleteTaskEvent(
+                  taskId: task.id,
+                  photoUrl: null,
+                  notes: notesController.text.isEmpty
+                      ? null
+                      : notesController.text,
+                ));
+            Navigator.pop(dialogContext);
+          },
+          child: const Text('Complete'),
+        ),
+      ],
+    ),
+  );
+}
+
+// Get current GPS location
+Future<Position?> _getCurrentLocation() async {
+  try {
+    return await LocationUtils.getCurrentPosition();
+  } catch (e) {
+    return null;
+  }
+}
+
+// Calculate distance between two points in meters
+double _calculateDistance(
+  double lat1,
+  double lon1,
+  double lat2,
+  double lon2,
+) {
+  return LocationUtils.calculateDistance(
+    startLatitude: lat1,
+    startLongitude: lon1,
+    endLatitude: lat2,
+    endLongitude: lon2,
+  );
+}
+
+void _showLocationError(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Location Error'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _navigateToEditTask(BuildContext context, Task task) async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => TaskFormPage(
+        taskId: task.id,
+        task: task,
+      ),
+    ),
+  );
+
+  // Reload task if it was updated
+  if (result == true && context.mounted) {
+    context.read<TaskBloc>().add(LoadTaskByIdEvent(task.id));
   }
 }
