@@ -23,6 +23,7 @@ class TaskModel extends entity.Task {
     required super.createdAt,
     required super.updatedAt,
     super.checkedInAt,
+    super.checkedOutAt,
     super.completedAt,
     super.photoUrls,
     super.checkInPhotoUrl,
@@ -54,6 +55,9 @@ class TaskModel extends entity.Task {
       updatedAt: TimestampHelper.parseDateTime(data['updatedAt']),
       checkedInAt: data['checkedInAt'] != null
           ? TimestampHelper.parseDateTime(data['checkedInAt'])
+          : null,
+      checkedOutAt: data['checkedOutAt'] != null
+          ? TimestampHelper.parseDateTime(data['checkedOutAt'])
           : null,
       completedAt: data['completedAt'] != null
           ? TimestampHelper.parseDateTime(data['completedAt'])
@@ -89,6 +93,7 @@ class TaskModel extends entity.Task {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'checkedInAt': checkedInAt?.toIso8601String(),
+      'checkedOutAt': checkedOutAt?.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
       'photoUrls': photoUrls,
       'checkInPhotoUrl': checkInPhotoUrl,
@@ -118,6 +123,7 @@ class TaskModel extends entity.Task {
       createdAt: createdAt,
       updatedAt: updatedAt,
       checkedInAt: checkedInAt,
+      checkedOutAt: checkedOutAt,
       completedAt: completedAt,
       photoUrls: photoUrls,
       checkInPhotoUrl: checkInPhotoUrl,
@@ -148,6 +154,7 @@ class TaskModel extends entity.Task {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       checkedInAt: task.checkedInAt,
+      checkedOutAt: task.checkedOutAt,
       completedAt: task.completedAt,
       photoUrls: task.photoUrls,
       checkInPhotoUrl: task.checkInPhotoUrl,

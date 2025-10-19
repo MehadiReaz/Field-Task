@@ -9,6 +9,7 @@ import '../../domain/usecases/create_task.dart';
 import '../../domain/usecases/update_task.dart';
 import '../../domain/usecases/delete_task.dart';
 import '../../domain/usecases/check_in_task.dart';
+import '../../domain/usecases/checkout_task.dart';
 import '../../domain/usecases/complete_task.dart';
 import '../../domain/usecases/search_tasks.dart';
 import 'task_event.dart';
@@ -23,6 +24,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final UpdateTask updateTask;
   final DeleteTask deleteTask;
   final CheckInTask checkInTask;
+  final CheckoutTask checkoutTask;
   final CompleteTask completeTask;
   final SearchTasks searchTasks;
 
@@ -34,6 +36,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     required this.updateTask,
     required this.deleteTask,
     required this.checkInTask,
+    required this.checkoutTask,
     required this.completeTask,
     required this.searchTasks,
   }) : super(const TaskInitial()) {
@@ -46,6 +49,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     on<UpdateTaskEvent>(_onUpdateTask);
     on<DeleteTaskEvent>(_onDeleteTask);
     on<CheckInTaskEvent>(_onCheckInTask);
+    on<CheckoutTaskEvent>(_onCheckoutTask);
     on<CompleteTaskEvent>(_onCompleteTask);
     on<RefreshTasksEvent>(_onRefreshTasks);
     on<SearchTasksEvent>(_onSearchTasks);
@@ -241,6 +245,21 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     result.fold(
       (failure) => emit(TaskError(failure.message)),
       (_) => emit(const TaskOperationSuccess('Checked in successfully')),
+    );
+  }
+
+  Future<void> _onCheckoutTask(
+    CheckoutTaskEvent event,
+    Emitter<TaskState> emit,
+  ) async {
+    emit(const TaskLoading());
+
+    final result = await checkoutTask(CheckoutTaskParams(id: event.taskId));
+
+    result.fold(
+      (failure) => emit(TaskError(failure.message)),
+      (_) => emit(const TaskOperationSuccess(
+          'Checked out successfully - task removed from list')),
     );
   }
 

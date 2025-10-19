@@ -21,6 +21,7 @@ class Task extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? checkedInAt;
+  final DateTime? checkedOutAt;
   final DateTime? completedAt;
   final List<String>? photoUrls;
   final String? checkInPhotoUrl;
@@ -48,6 +49,7 @@ class Task extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.checkedInAt,
+    this.checkedOutAt,
     this.completedAt,
     this.photoUrls,
     this.checkInPhotoUrl,
@@ -77,6 +79,7 @@ class Task extends Equatable {
         createdAt,
         updatedAt,
         checkedInAt,
+        checkedOutAt,
         completedAt,
         photoUrls,
         checkInPhotoUrl,
@@ -105,6 +108,7 @@ class Task extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? checkedInAt,
+    DateTime? checkedOutAt,
     DateTime? completedAt,
     List<String>? photoUrls,
     String? checkInPhotoUrl,
@@ -132,6 +136,7 @@ class Task extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       checkedInAt: checkedInAt ?? this.checkedInAt,
+      checkedOutAt: checkedOutAt ?? this.checkedOutAt,
       completedAt: completedAt ?? this.completedAt,
       photoUrls: photoUrls ?? this.photoUrls,
       checkInPhotoUrl: checkInPhotoUrl ?? this.checkInPhotoUrl,
@@ -146,6 +151,7 @@ class Task extends Equatable {
   // Helper getters
   bool get isPending => status == TaskStatus.pending;
   bool get isCheckedIn => status == TaskStatus.checkedIn;
+  bool get isCheckedOut => status == TaskStatus.checkedOut;
   bool get isCompleted => status == TaskStatus.completed;
   bool get isCancelled => status == TaskStatus.cancelled;
 

@@ -1,6 +1,7 @@
 enum TaskStatus {
   pending('pending'),
   checkedIn('checked_in'),
+  checkedOut('checked_out'),
   completed('completed'),
   cancelled('cancelled');
 
@@ -20,6 +21,8 @@ enum TaskStatus {
         return 'Pending';
       case TaskStatus.checkedIn:
         return 'Checked In';
+      case TaskStatus.checkedOut:
+        return 'Checked Out';
       case TaskStatus.completed:
         return 'Completed';
       case TaskStatus.cancelled:

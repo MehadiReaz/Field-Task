@@ -24,6 +24,7 @@ class Tasks extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get checkedInAt => dateTime().nullable()();
+  DateTimeColumn get checkedOutAt => dateTime().nullable()();
   DateTimeColumn get completedAt => dateTime().nullable()();
 
   // Media

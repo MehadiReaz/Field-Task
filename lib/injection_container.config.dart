@@ -57,6 +57,7 @@ import 'features/tasks/data/datasources/task_remote_datasource.dart' as _i403;
 import 'features/tasks/data/repositories/task_repository_impl.dart' as _i969;
 import 'features/tasks/domain/repositories/task_repository.dart' as _i356;
 import 'features/tasks/domain/usecases/check_in_task.dart' as _i754;
+import 'features/tasks/domain/usecases/checkout_task.dart' as _i797;
 import 'features/tasks/domain/usecases/complete_task.dart' as _i202;
 import 'features/tasks/domain/usecases/create_task.dart' as _i483;
 import 'features/tasks/domain/usecases/delete_task.dart' as _i335;
@@ -188,6 +189,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i175.SearchTasks(gh<_i356.TaskRepository>()));
     gh.factory<_i184.UpdateTask>(
         () => _i184.UpdateTask(gh<_i356.TaskRepository>()));
+    gh.factory<_i797.CheckoutTask>(
+        () => _i797.CheckoutTask(gh<_i356.TaskRepository>()));
     gh.factory<_i1006.TaskBloc>(() => _i1006.TaskBloc(
           getTasks: gh<_i441.GetTasks>(),
           getTasksPage: gh<_i968.GetTasksPage>(),
@@ -196,6 +199,7 @@ extension GetItInjectableX on _i174.GetIt {
           updateTask: gh<_i184.UpdateTask>(),
           deleteTask: gh<_i335.DeleteTask>(),
           checkInTask: gh<_i754.CheckInTask>(),
+          checkoutTask: gh<_i797.CheckoutTask>(),
           completeTask: gh<_i202.CompleteTask>(),
           searchTasks: gh<_i175.SearchTasks>(),
         ));

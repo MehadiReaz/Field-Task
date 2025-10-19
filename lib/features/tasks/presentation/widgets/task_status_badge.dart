@@ -63,6 +63,12 @@ class TaskStatusBadge extends StatelessWidget {
           icon: Icons.location_on,
           color: Colors.blue,
         );
+      case TaskStatus.checkedOut:
+        return _StatusConfig(
+          label: 'Checked Out',
+          icon: Icons.logout,
+          color: Colors.grey,
+        );
       case TaskStatus.completed:
         return _StatusConfig(
           label: 'Completed',

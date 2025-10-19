@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../core/enums/task_status.dart';
 import '../models/task_model.dart';
 import '../models/task_page_model.dart';
 
@@ -25,6 +26,7 @@ abstract class TaskRemoteDataSource {
     double longitude,
     String? photoUrl,
   );
+  Future<TaskModel> checkoutTask(String id);
   Future<TaskModel> completeTask(
     String id,
     String? completionNotes,
@@ -89,8 +91,23 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         tasksMap[task.id] = task;
       }
 
-      print('✅ Fetched ${tasksMap.length} tasks');
-      return tasksMap.values.toList();
+      // Filter out checked-out, completed, and cancelled tasks
+      // Also move expired tasks (past due date and not completed) to archived state
+      final activeTasks = tasksMap.values.where((task) {
+        // Exclude checked-out, completed, and cancelled tasks
+        if (task.status == TaskStatus.checkedOut ||
+            task.status == TaskStatus.completed ||
+            task.status == TaskStatus.cancelled) {
+          return false;
+        }
+
+        // Include all active tasks (pending and checked-in)
+        return true;
+      }).toList();
+
+      print(
+          '✅ Fetched ${tasksMap.length} total tasks, ${activeTasks.length} active tasks');
+      return activeTasks;
     } catch (e) {
       throw FirestoreException('Failed to fetch tasks: $e');
     }
@@ -137,15 +154,22 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         }
       }
 
+      // Filter out checked-out, completed, and cancelled tasks
+      final activeTasks = allTasks.where((task) {
+        return task.status != TaskStatus.checkedOut &&
+            task.status != TaskStatus.completed &&
+            task.status != TaskStatus.cancelled;
+      }).toList();
+
       // Sort by createdAt descending (client-side until index is ready)
-      allTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      activeTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       // Apply cursor-based pagination client-side
       int startIndex = 0;
       if (lastDocument != null) {
         // Find the last document's ID in our list
         final lastDocId = lastDocument.id;
-        startIndex = allTasks.indexWhere((task) => task.id == lastDocId);
+        startIndex = activeTasks.indexWhere((task) => task.id == lastDocId);
         if (startIndex >= 0) {
           startIndex += 1; // Start after the last document
         } else {
@@ -154,12 +178,12 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       }
 
       // Get the page
-      final endIndex = (startIndex + pageSize).clamp(0, allTasks.length);
-      final pageTasks = allTasks.sublist(startIndex, endIndex);
+      final endIndex = (startIndex + pageSize).clamp(0, activeTasks.length);
+      final pageTasks = activeTasks.sublist(startIndex, endIndex);
 
       // Determine the last document for next page
       DocumentSnapshot? nextLastDocument;
-      if (pageTasks.isNotEmpty && endIndex < allTasks.length) {
+      if (pageTasks.isNotEmpty && endIndex < activeTasks.length) {
         // Get the Firestore document for the last task in this page
         final lastTaskId = pageTasks.last.id;
         try {
@@ -174,7 +198,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       }
 
       // Determine if there are more items
-      final hasMore = endIndex < allTasks.length;
+      final hasMore = endIndex < activeTasks.length;
 
       print(
           '✅ Fetched paginated tasks: ${pageTasks.length} items (hasMore: $hasMore)');
@@ -393,6 +417,56 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       return updatedTask;
     } catch (e) {
       throw FirestoreException('Failed to check in task: $e');
+    }
+  }
+
+  @override
+  Future<TaskModel> checkoutTask(String id) async {
+    try {
+      final doc = await firestore.collection('tasks').doc(id).get();
+      if (!doc.exists) {
+        throw const FirestoreException('Task not found');
+      }
+
+      final task = TaskModel.fromFirestore(doc.data()!);
+      final updatedTask = TaskModel(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        dueDateTime: task.dueDateTime,
+        status: TaskStatus.checkedOut,
+        priority: task.priority,
+        latitude: task.latitude,
+        longitude: task.longitude,
+        address: task.address,
+        assignedToId: task.assignedToId,
+        assignedToName: task.assignedToName,
+        createdById: task.createdById,
+        createdByName: task.createdByName,
+        createdAt: task.createdAt,
+        updatedAt: DateTime.now(),
+        checkedInAt: task.checkedInAt,
+        checkedOutAt: DateTime.now(),
+        completedAt: task.completedAt,
+        photoUrls: task.photoUrls,
+        checkInPhotoUrl: task.checkInPhotoUrl,
+        completionPhotoUrl: task.completionPhotoUrl,
+        syncStatus: task.syncStatus,
+        completionNotes: task.completionNotes,
+        metadata: task.metadata,
+      );
+
+      await firestore
+          .collection('tasks')
+          .doc(id)
+          .update(updatedTask.toFirestore()
+            ..['status'] = TaskStatus.checkedOut.value
+            ..['checkedOutAt'] = DateTime.now().toIso8601String()
+            ..['updatedAt'] = DateTime.now().toIso8601String());
+
+      return updatedTask;
+    } catch (e) {
+      throw FirestoreException('Failed to checkout task: $e');
     }
   }
 

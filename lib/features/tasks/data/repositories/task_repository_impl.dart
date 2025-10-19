@@ -187,6 +187,17 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<Either<Failure, Task>> checkoutTask(String id) async {
+    try {
+      final task = await remoteDataSource.checkoutTask(id);
+      await localDataSource.updateTask(task);
+      return Right(task);
+    } catch (e) {
+      return const Left(ServerFailure());
+    }
+  }
+
+  @override
   Future<Either<Failure, Task>> completeTask(
     String id,
     String? completionNotes,

@@ -101,6 +101,16 @@ class CheckInTaskEvent extends TaskEvent {
   List<Object?> get props => [taskId, latitude, longitude, photoUrl, notes];
 }
 
+/// Check out from a task (removes from active list)
+class CheckoutTaskEvent extends TaskEvent {
+  final String taskId;
+
+  const CheckoutTaskEvent(this.taskId);
+
+  @override
+  List<Object?> get props => [taskId];
+}
+
 /// Complete a task
 class CompleteTaskEvent extends TaskEvent {
   final String taskId;

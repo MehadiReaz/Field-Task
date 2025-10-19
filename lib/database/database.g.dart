@@ -104,6 +104,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskEntity> {
   late final GeneratedColumn<DateTime> checkedInAt = GeneratedColumn<DateTime>(
       'checked_in_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _checkedOutAtMeta =
+      const VerificationMeta('checkedOutAt');
+  @override
+  late final GeneratedColumn<DateTime> checkedOutAt = GeneratedColumn<DateTime>(
+      'checked_out_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _completedAtMeta =
       const VerificationMeta('completedAt');
   @override
@@ -166,6 +172,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskEntity> {
         createdAt,
         updatedAt,
         checkedInAt,
+        checkedOutAt,
         completedAt,
         photoUrls,
         checkInPhotoUrl,
@@ -287,6 +294,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskEntity> {
           checkedInAt.isAcceptableOrUnknown(
               data['checked_in_at']!, _checkedInAtMeta));
     }
+    if (data.containsKey('checked_out_at')) {
+      context.handle(
+          _checkedOutAtMeta,
+          checkedOutAt.isAcceptableOrUnknown(
+              data['checked_out_at']!, _checkedOutAtMeta));
+    }
     if (data.containsKey('completed_at')) {
       context.handle(
           _completedAtMeta,
@@ -370,6 +383,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskEntity> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
       checkedInAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}checked_in_at']),
+      checkedOutAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}checked_out_at']),
       completedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
       photoUrls: attachedDatabase.typeMapping
@@ -410,6 +425,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? checkedInAt;
+  final DateTime? checkedOutAt;
   final DateTime? completedAt;
   final String? photoUrls;
   final String? checkInPhotoUrl;
@@ -434,6 +450,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
       required this.createdAt,
       required this.updatedAt,
       this.checkedInAt,
+      this.checkedOutAt,
       this.completedAt,
       this.photoUrls,
       this.checkInPhotoUrl,
@@ -465,6 +482,9 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || checkedInAt != null) {
       map['checked_in_at'] = Variable<DateTime>(checkedInAt);
+    }
+    if (!nullToAbsent || checkedOutAt != null) {
+      map['checked_out_at'] = Variable<DateTime>(checkedOutAt);
     }
     if (!nullToAbsent || completedAt != null) {
       map['completed_at'] = Variable<DateTime>(completedAt);
@@ -510,6 +530,9 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
       checkedInAt: checkedInAt == null && nullToAbsent
           ? const Value.absent()
           : Value(checkedInAt),
+      checkedOutAt: checkedOutAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(checkedOutAt),
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(completedAt),
@@ -550,6 +573,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       checkedInAt: serializer.fromJson<DateTime?>(json['checkedInAt']),
+      checkedOutAt: serializer.fromJson<DateTime?>(json['checkedOutAt']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
       photoUrls: serializer.fromJson<String?>(json['photoUrls']),
       checkInPhotoUrl: serializer.fromJson<String?>(json['checkInPhotoUrl']),
@@ -580,6 +604,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'checkedInAt': serializer.toJson<DateTime?>(checkedInAt),
+      'checkedOutAt': serializer.toJson<DateTime?>(checkedOutAt),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
       'photoUrls': serializer.toJson<String?>(photoUrls),
       'checkInPhotoUrl': serializer.toJson<String?>(checkInPhotoUrl),
@@ -607,6 +632,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
           DateTime? createdAt,
           DateTime? updatedAt,
           Value<DateTime?> checkedInAt = const Value.absent(),
+          Value<DateTime?> checkedOutAt = const Value.absent(),
           Value<DateTime?> completedAt = const Value.absent(),
           Value<String?> photoUrls = const Value.absent(),
           Value<String?> checkInPhotoUrl = const Value.absent(),
@@ -631,6 +657,8 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         checkedInAt: checkedInAt.present ? checkedInAt.value : this.checkedInAt,
+        checkedOutAt:
+            checkedOutAt.present ? checkedOutAt.value : this.checkedOutAt,
         completedAt: completedAt.present ? completedAt.value : this.completedAt,
         photoUrls: photoUrls.present ? photoUrls.value : this.photoUrls,
         checkInPhotoUrl: checkInPhotoUrl.present
@@ -673,6 +701,9 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       checkedInAt:
           data.checkedInAt.present ? data.checkedInAt.value : this.checkedInAt,
+      checkedOutAt: data.checkedOutAt.present
+          ? data.checkedOutAt.value
+          : this.checkedOutAt,
       completedAt:
           data.completedAt.present ? data.completedAt.value : this.completedAt,
       photoUrls: data.photoUrls.present ? data.photoUrls.value : this.photoUrls,
@@ -712,6 +743,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('checkedInAt: $checkedInAt, ')
+          ..write('checkedOutAt: $checkedOutAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('photoUrls: $photoUrls, ')
           ..write('checkInPhotoUrl: $checkInPhotoUrl, ')
@@ -741,6 +773,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
         createdAt,
         updatedAt,
         checkedInAt,
+        checkedOutAt,
         completedAt,
         photoUrls,
         checkInPhotoUrl,
@@ -769,6 +802,7 @@ class TaskEntity extends DataClass implements Insertable<TaskEntity> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.checkedInAt == this.checkedInAt &&
+          other.checkedOutAt == this.checkedOutAt &&
           other.completedAt == this.completedAt &&
           other.photoUrls == this.photoUrls &&
           other.checkInPhotoUrl == this.checkInPhotoUrl &&
@@ -795,6 +829,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> checkedInAt;
+  final Value<DateTime?> checkedOutAt;
   final Value<DateTime?> completedAt;
   final Value<String?> photoUrls;
   final Value<String?> checkInPhotoUrl;
@@ -820,6 +855,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.checkedInAt = const Value.absent(),
+    this.checkedOutAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.photoUrls = const Value.absent(),
     this.checkInPhotoUrl = const Value.absent(),
@@ -846,6 +882,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.checkedInAt = const Value.absent(),
+    this.checkedOutAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.photoUrls = const Value.absent(),
     this.checkInPhotoUrl = const Value.absent(),
@@ -885,6 +922,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? checkedInAt,
+    Expression<DateTime>? checkedOutAt,
     Expression<DateTime>? completedAt,
     Expression<String>? photoUrls,
     Expression<String>? checkInPhotoUrl,
@@ -911,6 +949,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (checkedInAt != null) 'checked_in_at': checkedInAt,
+      if (checkedOutAt != null) 'checked_out_at': checkedOutAt,
       if (completedAt != null) 'completed_at': completedAt,
       if (photoUrls != null) 'photo_urls': photoUrls,
       if (checkInPhotoUrl != null) 'check_in_photo_url': checkInPhotoUrl,
@@ -940,6 +979,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<DateTime?>? checkedInAt,
+      Value<DateTime?>? checkedOutAt,
       Value<DateTime?>? completedAt,
       Value<String?>? photoUrls,
       Value<String?>? checkInPhotoUrl,
@@ -965,6 +1005,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       checkedInAt: checkedInAt ?? this.checkedInAt,
+      checkedOutAt: checkedOutAt ?? this.checkedOutAt,
       completedAt: completedAt ?? this.completedAt,
       photoUrls: photoUrls ?? this.photoUrls,
       checkInPhotoUrl: checkInPhotoUrl ?? this.checkInPhotoUrl,
@@ -1027,6 +1068,9 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
     if (checkedInAt.present) {
       map['checked_in_at'] = Variable<DateTime>(checkedInAt.value);
     }
+    if (checkedOutAt.present) {
+      map['checked_out_at'] = Variable<DateTime>(checkedOutAt.value);
+    }
     if (completedAt.present) {
       map['completed_at'] = Variable<DateTime>(completedAt.value);
     }
@@ -1073,6 +1117,7 @@ class TasksCompanion extends UpdateCompanion<TaskEntity> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('checkedInAt: $checkedInAt, ')
+          ..write('checkedOutAt: $checkedOutAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('photoUrls: $photoUrls, ')
           ..write('checkInPhotoUrl: $checkInPhotoUrl, ')
@@ -2074,6 +2119,7 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> checkedInAt,
+  Value<DateTime?> checkedOutAt,
   Value<DateTime?> completedAt,
   Value<String?> photoUrls,
   Value<String?> checkInPhotoUrl,
@@ -2100,6 +2146,7 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> checkedInAt,
+  Value<DateTime?> checkedOutAt,
   Value<DateTime?> completedAt,
   Value<String?> photoUrls,
   Value<String?> checkInPhotoUrl,
@@ -2166,6 +2213,9 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get checkedInAt => $composableBuilder(
       column: $table.checkedInAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get checkedOutAt => $composableBuilder(
+      column: $table.checkedOutAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get completedAt => $composableBuilder(
       column: $table.completedAt, builder: (column) => ColumnFilters(column));
@@ -2253,6 +2303,10 @@ class $$TasksTableOrderingComposer
   ColumnOrderings<DateTime> get checkedInAt => $composableBuilder(
       column: $table.checkedInAt, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get checkedOutAt => $composableBuilder(
+      column: $table.checkedOutAt,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get completedAt => $composableBuilder(
       column: $table.completedAt, builder: (column) => ColumnOrderings(column));
 
@@ -2336,6 +2390,9 @@ class $$TasksTableAnnotationComposer
   GeneratedColumn<DateTime> get checkedInAt => $composableBuilder(
       column: $table.checkedInAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get checkedOutAt => $composableBuilder(
+      column: $table.checkedOutAt, builder: (column) => column);
+
   GeneratedColumn<DateTime> get completedAt => $composableBuilder(
       column: $table.completedAt, builder: (column) => column);
 
@@ -2397,6 +2454,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<DateTime?> checkedInAt = const Value.absent(),
+            Value<DateTime?> checkedOutAt = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
             Value<String?> photoUrls = const Value.absent(),
             Value<String?> checkInPhotoUrl = const Value.absent(),
@@ -2423,6 +2481,7 @@ class $$TasksTableTableManager extends RootTableManager<
             createdAt: createdAt,
             updatedAt: updatedAt,
             checkedInAt: checkedInAt,
+            checkedOutAt: checkedOutAt,
             completedAt: completedAt,
             photoUrls: photoUrls,
             checkInPhotoUrl: checkInPhotoUrl,
@@ -2449,6 +2508,7 @@ class $$TasksTableTableManager extends RootTableManager<
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<DateTime?> checkedInAt = const Value.absent(),
+            Value<DateTime?> checkedOutAt = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
             Value<String?> photoUrls = const Value.absent(),
             Value<String?> checkInPhotoUrl = const Value.absent(),
@@ -2475,6 +2535,7 @@ class $$TasksTableTableManager extends RootTableManager<
             createdAt: createdAt,
             updatedAt: updatedAt,
             checkedInAt: checkedInAt,
+            checkedOutAt: checkedOutAt,
             completedAt: completedAt,
             photoUrls: photoUrls,
             checkInPhotoUrl: checkInPhotoUrl,

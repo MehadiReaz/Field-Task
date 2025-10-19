@@ -347,6 +347,8 @@ class _FullMapPageState extends State<FullMapPage> {
         return Colors.green.withOpacity(0.3);
       case TaskStatus.checkedIn:
         return Colors.orange.withOpacity(0.3);
+      case TaskStatus.checkedOut:
+        return Colors.grey.withOpacity(0.2);
       case TaskStatus.pending:
         return Colors.blue.withOpacity(0.3);
       case TaskStatus.cancelled:

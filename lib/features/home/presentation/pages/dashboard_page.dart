@@ -500,6 +500,8 @@ class _TaskListItem extends StatelessWidget {
         return Colors.orange;
       case TaskStatus.checkedIn:
         return Colors.blue;
+      case TaskStatus.checkedOut:
+        return Colors.grey;
       case TaskStatus.completed:
         return Colors.green;
       case TaskStatus.cancelled:
@@ -513,6 +515,8 @@ class _TaskListItem extends StatelessWidget {
         return Icons.pending;
       case TaskStatus.checkedIn:
         return Icons.location_on;
+      case TaskStatus.checkedOut:
+        return Icons.logout;
       case TaskStatus.completed:
         return Icons.check_circle;
       case TaskStatus.cancelled:

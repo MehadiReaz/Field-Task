@@ -459,6 +459,11 @@ class TaskDetailView extends StatelessWidget {
         textColor = Colors.blue[900]!;
         label = 'Checked In';
         break;
+      case TaskStatus.checkedOut:
+        backgroundColor = Colors.grey[100]!;
+        textColor = Colors.grey[900]!;
+        label = 'Checked Out';
+        break;
       case TaskStatus.completed:
         backgroundColor = Colors.green[100]!;
         textColor = Colors.green[900]!;
@@ -607,6 +612,21 @@ class TaskDetailView extends StatelessWidget {
 
         const SizedBox(height: 12),
 
+        // Checkout Button (after checkin)
+        if (task.status == TaskStatus.checkedIn)
+          ElevatedButton.icon(
+            onPressed: () => _showCheckoutDialog(context, task),
+            icon: const Icon(Icons.logout),
+            label: const Text('Check Out'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.all(16),
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+          ),
+
+        const SizedBox(height: 12),
+
         // Complete Button
         if (task.status == TaskStatus.checkedIn)
           ElevatedButton.icon(
@@ -688,6 +708,36 @@ class TaskDetailView extends StatelessWidget {
         _showLocationError(context, 'Error getting location: $e');
       }
     }
+  }
+
+  void _showCheckoutDialog(BuildContext context, Task task) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Check Out'),
+        content: const Text(
+          'Are you sure you want to check out?\n\nThis will remove the task from your active list.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<TaskBloc>().add(CheckoutTaskEvent(task.id));
+              Navigator.pop(dialogContext);
+              // Go back to task list after checkout
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: const Text('Check Out'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showCompleteDialog(BuildContext context, Task task) {
