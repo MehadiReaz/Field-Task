@@ -5,8 +5,10 @@ import '../../../tasks/presentation/bloc/task_bloc.dart';
 import '../../../tasks/presentation/bloc/task_event.dart';
 import '../../../tasks/presentation/pages/task_list_page.dart';
 import '../../../tasks/presentation/pages/history_page.dart';
-import '../../../auth/presentation/pages/profile_page.dart';
+import '../../../sync/presentation/bloc/sync_bloc.dart';
+import '../../../sync/presentation/bloc/sync_state.dart';
 import 'dashboard_page.dart';
+import 'menu_page.dart';
 
 class HomePage extends StatefulWidget {
   final int initialIndex;
@@ -80,43 +82,84 @@ class _HomePageState extends State<HomePage> {
             child: const HistoryPage(),
           ),
 
-          // Profile
-          const ProfilePage(),
+          // Menu (replaces Profile)
+          const MenuPage(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavBarTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-            tooltip: 'Overview',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.task_alt),
-            label: 'Tasks',
-            tooltip: 'My Tasks',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-            tooltip: 'Task History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-            tooltip: 'My Profile',
-          ),
-        ],
+      bottomNavigationBar: BlocBuilder<SyncBloc, SyncState>(
+        builder: (context, syncState) {
+          final pendingCount = syncState is SyncIdle
+              ? syncState.pendingCount
+              : syncState is SyncInProgress
+                  ? syncState.queueCount
+                  : 0;
+
+          return BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: _onNavBarTapped,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Colors.grey,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            elevation: 8,
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard),
+                label: 'Dashboard',
+                tooltip: 'Overview',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.task_alt),
+                label: 'Tasks',
+                tooltip: 'My Tasks',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.history),
+                label: 'History',
+                tooltip: 'Task History',
+              ),
+              BottomNavigationBarItem(
+                icon: pendingCount > 0
+                    ? Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Icon(Icons.menu_rounded),
+                          Positioned(
+                            right: -6,
+                            top: -4,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                pendingCount > 9 ? '9+' : '$pendingCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : const Icon(Icons.menu_rounded),
+                label: 'Menu',
+                tooltip: 'Menu & Settings',
+              ),
+            ],
+          );
+        },
       ),
     );
   }

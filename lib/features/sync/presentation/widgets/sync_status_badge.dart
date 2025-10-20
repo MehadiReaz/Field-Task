@@ -99,9 +99,9 @@ class SyncStatusBadge extends StatelessWidget {
   String _getLabel() {
     switch (status) {
       case SyncStatus.pending:
-        return 'Pending';
+        return 'Sync';
       case SyncStatus.failed:
-        return 'Failed';
+        return 'Sync Failed';
       case SyncStatus.synced:
         return 'Synced';
     }

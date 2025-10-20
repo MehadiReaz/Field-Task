@@ -13,6 +13,7 @@ import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
 import 'task_form_page.dart';
+import '../../../sync/presentation/widgets/sync_status_badge.dart';
 
 class TaskDetailPage extends StatelessWidget {
   final String taskId;
@@ -123,6 +124,8 @@ class TaskDetailView extends StatelessWidget {
                       _buildStatusChip(task.status),
                       const SizedBox(width: 8),
                       _buildPriorityChip(task.priority),
+                      const SizedBox(width: 8),
+                      SyncStatusBadge(status: task.syncStatus),
                     ],
                   ),
                 ],

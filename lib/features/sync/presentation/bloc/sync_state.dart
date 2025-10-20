@@ -15,11 +15,17 @@ class SyncInitial extends SyncState {
 /// Syncing in progress
 class SyncInProgress extends SyncState {
   final int queueCount;
+  final double? progress; // 0.0 to 1.0
+  final int? itemsProcessed;
 
-  const SyncInProgress(this.queueCount);
+  const SyncInProgress(
+    this.queueCount, {
+    this.progress,
+    this.itemsProcessed,
+  });
 
   @override
-  List<Object?> get props => [queueCount];
+  List<Object?> get props => [queueCount, progress, itemsProcessed];
 }
 
 /// Sync completed successfully
@@ -42,14 +48,16 @@ class SyncSuccess extends SyncState {
 class SyncError extends SyncState {
   final String message;
   final int itemsFailed;
+  final bool canRetry;
 
   const SyncError({
     required this.message,
     required this.itemsFailed,
+    this.canRetry = true,
   });
 
   @override
-  List<Object?> get props => [message, itemsFailed];
+  List<Object?> get props => [message, itemsFailed, canRetry];
 }
 
 /// Sync queue status

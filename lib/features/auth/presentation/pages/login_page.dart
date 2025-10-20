@@ -57,52 +57,8 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticatedState) {
-            debugPrint(
-                '🔍 Login: User authenticated. SelectedAreaId: ${state.user.selectedAreaId}');
-
-            // Check if user has selected an area
-            if (state.user.selectedAreaId == null) {
-              debugPrint('⚠️ Login: No area selected, showing dialog');
-
-              // Wait a bit to ensure the widget tree is built
-              await Future.delayed(const Duration(milliseconds: 300));
-
-              if (!mounted) return;
-
-              // Show area selection dialog
-              // debugPrint('📱 Login: Showing area selection dialog');
-              // final result = await showDialog<bool>(
-              //   context: context,
-              //   barrierDismissible: false,
-              //   builder: (dialogContext) => BlocProvider(
-              //     create: (context) => getIt<AreaBloc>(),
-              //     child: const AreaSelectionDialog(isRequired: true),
-              //   ),
-              // );
-
-              // debugPrint('✅ Login: Dialog result: $result');
-
-              // if (result == true && mounted) {
-              //   // Area selected, refresh user data and proceed to home
-              //   debugPrint(
-              //       '✅ Login: Area selected, refreshing user and navigating to home');
-              //   context.read<AuthBloc>().add(GetCurrentUserEvent());
-              //   context.go(RouteNames.home);
-              // } else if (mounted) {
-              //   // If dialog was somehow dismissed without selection, show error
-              //   debugPrint('❌ Login: Dialog dismissed without selection');
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     const SnackBar(
-              //       content: Text('You must select an area to continue'),
-              //       backgroundColor: Colors.red,
-              //     ),
-              //   );
-              // }
-            } else {
-              // User has area selected, navigate to home
-              debugPrint('✅ Login: User has area, navigating to home');
-              context.go(RouteNames.home);
-            }
+            debugPrint('✅ Login: User authenticated, navigating to home');
+            context.go(RouteNames.home);
           }
         },
         builder: (context, state) {

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../../../core/enums/task_priority.dart';
 import '../../../../core/enums/task_status.dart';
 import '../../../../core/enums/sync_status.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/utils/location_utils.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
@@ -43,6 +45,8 @@ class _TaskFormViewState extends State<TaskFormView> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
 
   DateTime _selectedDueDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
@@ -51,6 +55,7 @@ class _TaskFormViewState extends State<TaskFormView> {
   double? _selectedLatitude;
   double? _selectedLongitude;
   String? _selectedAddress;
+  bool _isFetchingLocation = false;
 
   @override
   void initState() {
@@ -64,6 +69,14 @@ class _TaskFormViewState extends State<TaskFormView> {
       _selectedLatitude = widget.existingTask!.latitude;
       _selectedLongitude = widget.existingTask!.longitude;
       _selectedAddress = widget.existingTask!.address;
+
+      // Populate lat/long fields if available
+      if (_selectedLatitude != null) {
+        _latitudeController.text = _selectedLatitude!.toStringAsFixed(6);
+      }
+      if (_selectedLongitude != null) {
+        _longitudeController.text = _selectedLongitude!.toStringAsFixed(6);
+      }
     }
   }
 
@@ -71,6 +84,8 @@ class _TaskFormViewState extends State<TaskFormView> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -221,10 +236,11 @@ class _TaskFormViewState extends State<TaskFormView> {
                   Card(
                     elevation: 2,
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Header
                           Row(
                             children: [
                               const Icon(
@@ -233,52 +249,185 @@ class _TaskFormViewState extends State<TaskFormView> {
                                 size: 24,
                               ),
                               const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Task Location',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    if (_selectedAddress != null)
-                                      Text(
-                                        _selectedAddress!,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      )
-                                    else
-                                      const Text(
-                                        'No location selected',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                  ],
+                              const Expanded(
+                                child: Text(
+                                  'Task Location',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
                             ],
                           ),
-                          const SizedBox(height: 12),
+
+                          const SizedBox(height: 16),
+
+                          // Use Current Location Button
                           SizedBox(
                             width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: isLoading ? null : _selectLocation,
+                            child: OutlinedButton.icon(
+                              onPressed: isLoading || _isFetchingLocation
+                                  ? null
+                                  : _useCurrentLocation,
+                              icon: _isFetchingLocation
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.my_location),
+                              label: Text(
+                                _isFetchingLocation
+                                    ? 'Getting location...'
+                                    : 'Use Current Location',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.blue,
+                                side: const BorderSide(color: Colors.blue),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          const Text(
+                            'OR',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Manual Latitude Input
+                          TextFormField(
+                            controller: _latitudeController,
+                            decoration: const InputDecoration(
+                              labelText: 'Latitude',
+                              hintText: 'e.g., 23.8103',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.place, size: 20),
+                              isDense: true,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: true,
+                            ),
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                _selectedLatitude = double.tryParse(value);
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Latitude is required';
+                              }
+                              final lat = double.tryParse(value);
+                              if (lat == null) {
+                                return 'Invalid latitude';
+                              }
+                              if (lat < -90 || lat > 90) {
+                                return 'Latitude must be between -90 and 90';
+                              }
+                              return null;
+                            },
+                            enabled: !isLoading,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Manual Longitude Input
+                          TextFormField(
+                            controller: _longitudeController,
+                            decoration: const InputDecoration(
+                              labelText: 'Longitude',
+                              hintText: 'e.g., 90.4125',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.place, size: 20),
+                              isDense: true,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: true,
+                            ),
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                _selectedLongitude = double.tryParse(value);
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Longitude is required';
+                              }
+                              final lng = double.tryParse(value);
+                              if (lng == null) {
+                                return 'Invalid longitude';
+                              }
+                              if (lng < -180 || lng > 180) {
+                                return 'Longitude must be between -180 and 180';
+                              }
+                              return null;
+                            },
+                            enabled: !isLoading,
+                          ),
+
+                          if (_selectedAddress != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.blue.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _selectedAddress!,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black87,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 12),
+
+                          const Divider(),
+
+                          const SizedBox(height: 12),
+
+                          // Map Selection (Optional)
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed:
+                                  isLoading ? null : _selectLocationOnMap,
                               icon: const Icon(Icons.map),
-                              label: const Text('Select Location on Map'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
+                              label: const Text('Select on Map (Optional)'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey[700],
                               ),
                             ),
                           ),
@@ -322,7 +471,68 @@ class _TaskFormViewState extends State<TaskFormView> {
     );
   }
 
-  Future<void> _selectLocation() async {
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isFetchingLocation = true);
+
+    try {
+      final position = await LocationUtils.getCurrentPosition();
+
+      setState(() {
+        _selectedLatitude = position.latitude;
+        _selectedLongitude = position.longitude;
+        _latitudeController.text = position.latitude.toStringAsFixed(6);
+        _longitudeController.text = position.longitude.toStringAsFixed(6);
+      });
+
+      // Try to get address from coordinates
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          setState(() {
+            _selectedAddress = [
+              place.street,
+              place.locality,
+              place.country,
+            ].where((s) => s != null && s.isNotEmpty).join(', ');
+          });
+        }
+      } catch (e) {
+        // Address lookup failed, but we have coordinates
+        setState(() {
+          _selectedAddress = 'Lat: ${position.latitude.toStringAsFixed(4)}, '
+              'Lng: ${position.longitude.toStringAsFixed(4)}';
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Current location set successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get location: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isFetchingLocation = false);
+    }
+  }
+
+  Future<void> _selectLocationOnMap() async {
     final result = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (context) => MapSelectionPage(
@@ -337,6 +547,10 @@ class _TaskFormViewState extends State<TaskFormView> {
         _selectedLatitude = result['latitude'] as double;
         _selectedLongitude = result['longitude'] as double;
         _selectedAddress = result['address'] as String?;
+
+        // Update text fields
+        _latitudeController.text = _selectedLatitude!.toStringAsFixed(6);
+        _longitudeController.text = _selectedLongitude!.toStringAsFixed(6);
       });
     }
   }

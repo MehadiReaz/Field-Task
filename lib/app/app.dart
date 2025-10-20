@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/services/connectivity_service.dart';
+import '../core/services/notification_service.dart';
 import '../core/widgets/connectivity_banner.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/location/presentation/bloc/location_bloc.dart';
@@ -16,6 +17,8 @@ class FieldTaskApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final notificationService = getIt<NotificationService>();
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -35,6 +38,7 @@ class FieldTaskApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         routerConfig: AppRouter.router,
+        scaffoldMessengerKey: notificationService.scaffoldKey,
         builder: (context, child) {
           return ConnectivityBanner(
             connectivityService: getIt<ConnectivityService>(),

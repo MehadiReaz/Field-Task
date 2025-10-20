@@ -41,13 +41,16 @@ class SyncService {
   }
 
   /// Process all pending sync items in the queue
-  Future<SyncResult> processQueue() async {
+  Future<SyncResult> processQueue({
+    void Function(int processed, int total)? onProgress,
+  }) async {
     if (_isSyncing) {
       return SyncResult(
         success: false,
         itemsProcessed: 0,
         itemsFailed: 0,
         message: 'Sync already in progress',
+        canRetry: false,
       );
     }
 
@@ -65,14 +68,20 @@ class SyncService {
           itemsProcessed: 0,
           itemsFailed: 0,
           message: 'No items to sync',
+          canRetry: false,
         );
       }
+
+      final total = items.length;
 
       for (final item in items) {
         try {
           await _processSyncItem(item);
           await syncDataSource.removeFromQueue(item.id);
           processed++;
+
+          // Report progress
+          onProgress?.call(processed, total);
         } catch (e) {
           failed++;
 
@@ -92,8 +101,9 @@ class SyncService {
         itemsProcessed: processed,
         itemsFailed: failed,
         message: failed == 0
-            ? 'Synced $processed items successfully'
-            : 'Synced $processed items, $failed failed',
+            ? 'Successfully synced $processed ${processed == 1 ? 'item' : 'items'}'
+            : 'Synced $processed ${processed == 1 ? 'item' : 'items'}, $failed failed',
+        canRetry: failed > 0,
       );
     } catch (e) {
       _isSyncing = false;
@@ -102,6 +112,7 @@ class SyncService {
         itemsProcessed: processed,
         itemsFailed: failed,
         message: 'Sync error: ${e.toString()}',
+        canRetry: true,
       );
     }
   }
@@ -163,11 +174,13 @@ class SyncResult {
   final int itemsProcessed;
   final int itemsFailed;
   final String message;
+  final bool canRetry;
 
   SyncResult({
     required this.success,
     required this.itemsProcessed,
     required this.itemsFailed,
     required this.message,
+    this.canRetry = true,
   });
 }

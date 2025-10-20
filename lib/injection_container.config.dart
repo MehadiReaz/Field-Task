@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 import 'core/network/network_info.dart' as _i75;
 import 'core/network/network_info_impl.dart' as _i973;
 import 'core/services/connectivity_service.dart' as _i524;
+import 'core/services/notification_service.dart' as _i1011;
 import 'database/database.dart' as _i565;
 import 'features/auth/data/datasources/auth_local_datasource.dart' as _i1043;
 import 'features/auth/data/datasources/auth_remote_datasource.dart' as _i588;
@@ -79,6 +80,8 @@ extension GetItInjectableX on _i174.GetIt {
     final registerModule = _$RegisterModule();
     gh.lazySingleton<_i524.ConnectivityService>(
         () => _i524.ConnectivityService());
+    gh.lazySingleton<_i1011.NotificationService>(
+        () => _i1011.NotificationService());
     gh.lazySingleton<_i59.FirebaseAuth>(() => registerModule.firebaseAuth);
     gh.lazySingleton<_i974.FirebaseFirestore>(
         () => registerModule.firebaseFirestore);
@@ -122,12 +125,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i428.SyncDataSourceImpl(gh<_i565.AppDatabase>()));
     gh.lazySingleton<_i361.TaskLocalDataSource>(
         () => _i361.TaskLocalDataSourceImpl(gh<_i565.AppDatabase>()));
-    gh.lazySingleton<_i356.TaskRepository>(() => _i969.TaskRepositoryImpl(
-          remoteDataSource: gh<_i403.TaskRemoteDataSource>(),
-          localDataSource: gh<_i361.TaskLocalDataSource>(),
-          networkInfo: gh<_i75.NetworkInfo>(),
-          database: gh<_i565.AppDatabase>(),
-        ));
     gh.lazySingleton<_i1015.AuthRepository>(() => _i111.AuthRepositoryImpl(
           remoteDataSource: gh<_i588.AuthRemoteDataSource>(),
           localDataSource: gh<_i1043.AuthLocalDataSource>(),
@@ -151,6 +148,28 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i872.SignOut(gh<_i1015.AuthRepository>()));
     gh.lazySingleton<_i250.UpdateUserArea>(
         () => _i250.UpdateUserArea(gh<_i1015.AuthRepository>()));
+    gh.lazySingleton<_i443.SyncService>(() => _i443.SyncService(
+          syncDataSource: gh<_i428.SyncDataSource>(),
+          taskRemoteDataSource: gh<_i403.TaskRemoteDataSource>(),
+          connectivityService: gh<_i524.ConnectivityService>(),
+        ));
+    gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
+          signInWithGoogle: gh<_i648.SignInWithGoogle>(),
+          signInWithEmail: gh<_i509.SignInWithEmail>(),
+          signOut: gh<_i872.SignOut>(),
+          getCurrentUser: gh<_i191.GetCurrentUser>(),
+          checkAuthStatus: gh<_i818.CheckAuthStatus>(),
+        ));
+    gh.factory<_i416.SyncBloc>(
+        () => _i416.SyncBloc(syncService: gh<_i443.SyncService>()));
+    gh.lazySingleton<_i356.TaskRepository>(() => _i969.TaskRepositoryImpl(
+          remoteDataSource: gh<_i403.TaskRemoteDataSource>(),
+          localDataSource: gh<_i361.TaskLocalDataSource>(),
+          networkInfo: gh<_i75.NetworkInfo>(),
+          database: gh<_i565.AppDatabase>(),
+          firebaseAuth: gh<_i59.FirebaseAuth>(),
+          syncBloc: gh<_i416.SyncBloc>(),
+        ));
     gh.factory<_i797.CheckoutTask>(
         () => _i797.CheckoutTask(gh<_i356.TaskRepository>()));
     gh.factory<_i754.CheckInTask>(
@@ -177,20 +196,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i27.GetExpiredTasks(gh<_i356.TaskRepository>()));
     gh.lazySingleton<_i976.GetTasksByStatus>(
         () => _i976.GetTasksByStatus(gh<_i356.TaskRepository>()));
-    gh.lazySingleton<_i443.SyncService>(() => _i443.SyncService(
-          syncDataSource: gh<_i428.SyncDataSource>(),
-          taskRemoteDataSource: gh<_i403.TaskRemoteDataSource>(),
-          connectivityService: gh<_i524.ConnectivityService>(),
-        ));
-    gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
-          signInWithGoogle: gh<_i648.SignInWithGoogle>(),
-          signInWithEmail: gh<_i509.SignInWithEmail>(),
-          signOut: gh<_i872.SignOut>(),
-          getCurrentUser: gh<_i191.GetCurrentUser>(),
-          checkAuthStatus: gh<_i818.CheckAuthStatus>(),
-        ));
-    gh.factory<_i416.SyncBloc>(
-        () => _i416.SyncBloc(syncService: gh<_i443.SyncService>()));
     gh.factory<_i1006.TaskBloc>(() => _i1006.TaskBloc(
           getTasks: gh<_i441.GetTasks>(),
           getTasksPage: gh<_i968.GetTasksPage>(),

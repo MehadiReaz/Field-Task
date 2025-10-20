@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes/route_names.dart';
+import '../../../../core/widgets/safe_network_image.dart';
 import '../bloc/auth_bloc.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -49,14 +50,10 @@ class ProfilePage extends StatelessWidget {
                     Center(
                       child: Column(
                         children: [
-                          CircleAvatar(
+                          SafeCircleAvatar(
+                            imageUrl: user.photoUrl,
+                            fallbackText: user.displayName,
                             radius: 50,
-                            backgroundImage: user.photoUrl != null
-                                ? NetworkImage(user.photoUrl!)
-                                : null,
-                            child: user.photoUrl == null
-                                ? const Icon(Icons.person, size: 50)
-                                : null,
                           ),
                           const SizedBox(height: 16),
                           Text(
