@@ -43,6 +43,8 @@ import 'features/location/domain/usecases/request_location_permission.dart'
     as _i460;
 import 'features/location/domain/usecases/validate_proximity.dart' as _i622;
 import 'features/location/presentation/bloc/location_bloc.dart' as _i738;
+import 'features/settings/data/theme_repository.dart' as _i615;
+import 'features/settings/presentation/notifier/theme_notifier.dart' as _i1018;
 import 'features/sync/data/datasources/sync_datasource.dart' as _i428;
 import 'features/sync/domain/services/sync_service.dart' as _i443;
 import 'features/sync/presentation/bloc/sync_bloc.dart' as _i416;
@@ -92,6 +94,9 @@ extension GetItInjectableX on _i174.GetIt {
       () => registerModule.sharedPreferences,
       preResolve: true,
     );
+    gh.lazySingleton<_i615.ThemeRepository>(
+        () => registerModule.themeRepository);
+    gh.lazySingleton<_i1018.ThemeBloc>(() => registerModule.themeBloc);
     gh.lazySingleton<_i558.FlutterSecureStorage>(
         () => registerModule.secureStorage);
     gh.lazySingleton<_i942.LocationDataSource>(

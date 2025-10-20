@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'database/database.dart';
+import 'package:task_trackr/features/settings/data/theme_repository.dart';
+import 'package:task_trackr/features/settings/presentation/notifier/theme_notifier.dart';
 import 'injection_container.config.dart';
 
 final getIt = GetIt.instance;
@@ -42,9 +44,18 @@ abstract class RegisterModule {
       SharedPreferences.getInstance();
 
   @lazySingleton
+  ThemeRepository get themeRepository =>
+      ThemeRepository(getIt<SharedPreferences>());
+
+  @lazySingleton
+  ThemeBloc get themeBloc => ThemeBloc(themeRepository);
+
+  @lazySingleton
   FlutterSecureStorage get secureStorage => const FlutterSecureStorage(
         aOptions: AndroidOptions(
           encryptedSharedPreferences: true,
         ),
       );
 }
+
+// Note: ThemeRepository uses the pre-resolved SharedPreferences above via getIt

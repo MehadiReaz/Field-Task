@@ -7,6 +7,7 @@ import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
+import '_animated_history_item.dart';
 import 'task_detail_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -17,7 +18,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  String _selectedFilter = 'all'; // 'all', 'completed', 'cancelled'
+  String _selectedFilter = 'all'; // 'all', 'completed', 'expired'
   String _sortBy = 'recent'; // 'recent', 'oldest', 'priority'
 
   @override
@@ -37,10 +38,10 @@ class _HistoryPageState extends State<HistoryPage> {
 
     if (_selectedFilter == 'completed') {
       filtered = tasks.where((t) => t.status == TaskStatus.completed).toList();
-    } else if (_selectedFilter == 'cancelled') {
+    } else if (_selectedFilter == 'expired') {
       filtered = tasks.where((t) => t.status == TaskStatus.cancelled).toList();
     } else {
-      // 'all' - show both completed and cancelled
+      // 'all' - show both completed and expired
       filtered = tasks
           .where((t) =>
               t.status == TaskStatus.completed ||
@@ -137,7 +138,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 const SizedBox(width: 8),
                 _buildFilterChip('Completed', 'completed', Icons.check_circle),
                 const SizedBox(width: 8),
-                _buildFilterChip('Cancelled', 'cancelled', Icons.cancel),
+                _buildFilterChip('Expired', 'expired', Icons.cancel),
               ],
             ),
           ),
@@ -197,10 +198,25 @@ class _HistoryPageState extends State<HistoryPage> {
                       _loadHistory();
                     },
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 0),
                       itemCount: filteredTasks.length,
                       itemBuilder: (context, index) {
-                        return _buildHistoryCard(context, filteredTasks[index]);
+                        final task = filteredTasks[index];
+                        return AnimatedHistoryItem(
+                          key: ValueKey(task.id),
+                          task: task,
+                          index: index,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    TaskDetailPage(taskId: task.id),
+                              ),
+                            );
+                          },
+                        );
                       },
                     ),
                   );
@@ -250,10 +266,10 @@ class _HistoryPageState extends State<HistoryPage> {
       icon = Icons.task_alt;
       message = 'No completed tasks yet';
       submessage = 'Complete some tasks to see them here';
-    } else if (_selectedFilter == 'cancelled') {
+    } else if (_selectedFilter == 'expired') {
       icon = Icons.cancel_outlined;
-      message = 'No cancelled tasks';
-      submessage = 'Cancelled tasks will appear here';
+      message = 'No expired tasks';
+      submessage = 'Expired tasks will appear here';
     } else {
       icon = Icons.history;
       message = 'No task history';
@@ -384,7 +400,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      isCompleted ? 'Completed' : 'Cancelled',
+                      isCompleted ? 'Completed' : 'Expired',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],

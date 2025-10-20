@@ -250,8 +250,8 @@ class TaskDetailView extends StatelessWidget {
                             markers: [
                               Marker(
                                 point: LatLng(task.latitude, task.longitude),
-                                width: 50,
-                                height: 50,
+                                width: 70,
+                                height: 70,
                                 child: GestureDetector(
                                   child: Column(
                                     children: [
@@ -475,7 +475,7 @@ class TaskDetailView extends StatelessWidget {
       case TaskStatus.cancelled:
         backgroundColor = Colors.red[100]!;
         textColor = Colors.red[900]!;
-        label = 'Cancelled';
+        label = 'Expired';
         break;
     }
 

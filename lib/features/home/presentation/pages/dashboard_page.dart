@@ -17,60 +17,81 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage>
+    with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              context.read<TaskBloc>().add(const LoadMyTasksEvent());
-            },
-            tooltip: 'Refresh',
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           context.read<TaskBloc>().add(const LoadMyTasksEvent());
+          await Future.delayed(const Duration(milliseconds: 300));
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Section
-              _buildWelcomeSection(),
-
-              // Stats Cards
-              _buildStatsSection(),
-
-              // Quick Actions
-              _buildQuickActions(),
-
-              // Recent Tasks
-              _buildRecentTasks(),
-
-              const SizedBox(height: 24),
-            ],
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeSection(),
+                  _buildStatsSection(),
+                  _buildQuickActions(),
+                  _buildRecentTasks(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TaskFormPage(),
-            ),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Task'),
       ),
     );
   }
@@ -83,44 +104,66 @@ class _DashboardPageState extends State<DashboardPage> {
           userName = state.user.displayName;
         }
 
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).primaryColor,
-                Theme.of(context).primaryColor.withOpacity(0.7),
+        return TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 600),
+          tween: Tween(begin: 0.0, end: 1.0),
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Opacity(
+                opacity: value,
+                child: child,
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context).primaryColor.withOpacity(0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
               ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back,',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                userName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-              ),
-            ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back,',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  userName,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -168,20 +211,22 @@ class _DashboardPageState extends State<DashboardPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(
+                    child: _AnimatedStatCard(
                       title: 'Total',
                       value: totalTasks.toString(),
                       icon: Icons.task_alt,
                       color: Colors.blue,
+                      delay: 100,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _StatCard(
+                    child: _AnimatedStatCard(
                       title: 'Pending',
                       value: pendingTasks.toString(),
                       icon: Icons.pending_actions,
                       color: Colors.orange,
+                      delay: 200,
                     ),
                   ),
                 ],
@@ -190,20 +235,22 @@ class _DashboardPageState extends State<DashboardPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(
+                    child: _AnimatedStatCard(
                       title: 'Completed',
                       value: completedTasks.toString(),
                       icon: Icons.check_circle,
                       color: Colors.green,
+                      delay: 300,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _StatCard(
+                    child: _AnimatedStatCard(
                       title: 'Due Today',
                       value: dueTodayTasks.toString(),
                       icon: Icons.today,
                       color: Colors.red,
+                      delay: 400,
                     ),
                   ),
                 ],
@@ -231,10 +278,11 @@ class _DashboardPageState extends State<DashboardPage> {
           Row(
             children: [
               Expanded(
-                child: _QuickActionCard(
+                child: _AnimatedQuickActionCard(
                   title: 'Create Task',
                   icon: Icons.add_task,
                   color: Colors.blue,
+                  delay: 100,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -247,40 +295,11 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _QuickActionCard(
-                  title: 'View Map',
-                  icon: Icons.map,
-                  color: Colors.green,
-                  onTap: () {
-                    // Switch to map tab
-                    final homeState = context.findAncestorStateOfType<State>();
-                    if (homeState != null) {
-                      // Navigate to map tab (index 2)
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _QuickActionCard(
-                  title: 'Manage Areas',
-                  icon: Icons.location_city,
-                  color: Colors.purple,
-                  onTap: () {
-                    // Switch to areas tab
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickActionCard(
-                  title: 'My Location',
+                child: _AnimatedQuickActionCard(
+                  title: 'Update Location',
                   icon: Icons.my_location,
                   color: Colors.orange,
+                  delay: 400,
                   onTap: () {
                     context
                         .read<LocationBloc>()
@@ -294,6 +313,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -360,22 +380,19 @@ class _DashboardPageState extends State<DashboardPage> {
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        // Navigate to tasks tab
-                      },
-                      child: const Text('See All'),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentTasks.length,
+                  itemCount: recentTasks.length > 5 ? recentTasks.length : 3,
                   itemBuilder: (context, index) {
                     final task = recentTasks[index];
-                    return _TaskListItem(task: task);
+                    return _AnimatedTaskListItem(
+                      task: task,
+                      delay: index * 100,
+                    );
                   },
                 ),
               ],
@@ -389,96 +406,100 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-// Stat Card Widget
-class _StatCard extends StatelessWidget {
+// Animated Stat Card Widget
+class _AnimatedStatCard extends StatefulWidget {
   final String title;
   final String value;
   final IconData icon;
   final Color color;
+  final int delay;
 
-  const _StatCard({
+  const _AnimatedStatCard({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
+    required this.delay,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 28),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
 }
 
-// Quick Action Card Widget
-class _QuickActionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
+class _AnimatedStatCardState extends State<_AnimatedStatCard> {
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+    final theme = Theme.of(context);
+    final Color statColor = theme.colorScheme.primary;
+    final Color statTextColor = theme.colorScheme.onSurface.withOpacity(0.8);
+    final Color statLabelColor = theme.colorScheme.onSurface.withOpacity(0.6);
+
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 600 + widget.delay),
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        final v = value.clamp(0.0, 1.0);
+        return Transform.scale(
+          scale: v,
+          child: Opacity(
+            opacity: v,
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        // elevation: 2,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 400 + widget.delay),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    curve: Curves.elasticOut,
+                    builder: (context, value, child) {
+                      final v = value.clamp(0.0, 1.0);
+                      return Transform.scale(
+                        scale: v,
+                        child: Icon(widget.icon, color: statColor, size: 28),
+                      );
+                    },
+                  ),
+                  TweenAnimationBuilder<int>(
+                    duration: Duration(milliseconds: 800 + widget.delay),
+                    tween: IntTween(
+                      begin: 0,
+                      end: int.tryParse(widget.value) ?? 0,
+                    ),
+                    builder: (context, value, child) {
+                      final displayValue = value >= 9 ? '9+' : value.toString();
+                      return Text(
+                        displayValue,
+                        style: value >= 9
+                            ? theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: statTextColor,
+                              )
+                            : theme.textTheme.headlineLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: statTextColor,
+                              ),
+                      );
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                widget.title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: statLabelColor,
+                ),
               ),
             ],
           ),
@@ -488,11 +509,96 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-// Task List Item Widget
-class _TaskListItem extends StatelessWidget {
-  final dynamic task;
+// Animated Quick Action Card Widget
+class _AnimatedQuickActionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final int delay;
 
-  const _TaskListItem({required this.task});
+  const _AnimatedQuickActionCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    required this.delay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final Color actionColor = theme.colorScheme.secondary;
+    final Color actionTextColor = theme.colorScheme.onSurface.withOpacity(0.8);
+
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 600 + delay),
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        // elevation: 2,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                TweenAnimationBuilder<double>(
+                  duration: Duration(milliseconds: 400 + delay),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  curve: Curves.elasticOut,
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: actionColor.withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: actionColor, size: 28),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: actionTextColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Animated Task List Item Widget
+class _AnimatedTaskListItem extends StatelessWidget {
+  final dynamic task;
+  final int delay;
+
+  const _AnimatedTaskListItem({
+    required this.task,
+    required this.delay,
+  });
 
   Color _getStatusColor(TaskStatus status) {
     switch (status) {
@@ -526,57 +632,71 @@ class _TaskListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: _getStatusColor(task.status).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 500 + delay),
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(50 * (1 - value), 0),
+          child: Opacity(
+            opacity: value,
+            child: child,
           ),
-          child: Icon(
-            _getStatusIcon(task.status),
-            color: _getStatusColor(task.status),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _getStatusColor(task.status).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getStatusIcon(task.status),
+              color: _getStatusColor(task.status),
+            ),
           ),
+          title: Text(
+            task.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                task.description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    DateFormat('MMM dd, hh:mm a').format(task.dueDateTime),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TaskDetailPage(taskId: task.id),
+              ),
+            );
+          },
         ),
-        title: Text(
-          task.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              task.description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  DateFormat('MMM dd, hh:mm a').format(task.dueDateTime),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ],
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TaskDetailPage(taskId: task.id),
-            ),
-          );
-        },
       ),
     );
   }

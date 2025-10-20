@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/routes/route_names.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../sync/presentation/bloc/sync_bloc.dart';
@@ -209,7 +210,7 @@ class MenuPage extends StatelessWidget {
                   title: 'Settings',
                   subtitle: 'App preferences and configuration',
                   onTap: () {
-                    // TODO: Navigate to settings
+                    context.push(RouteNames.settings);
                   },
                 ),
                 _buildMenuItem(

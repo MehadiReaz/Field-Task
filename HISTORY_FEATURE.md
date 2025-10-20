@@ -1,7 +1,7 @@
 # 📜 History Feature - Complete Implementation
 
 ## Overview
-Replaced the **Map** tab with a comprehensive **History** section where users can view all their completed and cancelled tasks. This provides better visibility into past work and task completion patterns.
+Replaced the **Map** tab with a comprehensive **History** section where users can view all their completed and expired tasks. This provides better visibility into past work and task completion patterns.
 
 ---
 
@@ -10,7 +10,7 @@ Replaced the **Map** tab with a comprehensive **History** section where users ca
 ### **Before:**
 - Bottom navigation had: Dashboard | Tasks | **Map** | Profile
 - Map feature showed task locations on an interactive map
-- No easy way to see completed/cancelled tasks
+- No easy way to see completed/expired tasks
 
 ### **After:**
 - Bottom navigation now has: Dashboard | Tasks | **History** | Profile
@@ -24,9 +24,9 @@ Replaced the **Map** tab with a comprehensive **History** section where users ca
 
 ### **1. Task Filtering** 🔍
 Filter tasks by status:
-- **All** - Shows both completed and cancelled tasks
+- **All** - Shows both completed and expired tasks
 - **Completed** ✅ - Only completed tasks
-- **Cancelled** ❌ - Only cancelled tasks
+- **Expired** ❌ - Only expired tasks
 
 ### **2. Sorting Options** 📊
 Sort tasks by:
@@ -36,7 +36,7 @@ Sort tasks by:
 
 ### **3. Rich Task Cards** 🎴
 Each history card shows:
-- ✅ Status icon (completed/cancelled)
+- ✅ Status icon (completed/expired)
 - 📝 Task title and description
 - 🎯 Priority badge (High/Medium/Low)
 - 📅 Completion date
@@ -65,7 +65,7 @@ Shows how long tasks took to complete:
 ┌─────────────────────────────────────┐
 │  Task History            [Sort ▼]  │ ← AppBar
 ├─────────────────────────────────────┤
-│  [All] [Completed] [Cancelled]     │ ← Filter Chips
+│  [All] [Completed] [Expired]     │ ← Filter Chips
 ├─────────────────────────────────────┤
 │                                     │
 │  ┌───────────────────────────────┐ │
@@ -82,7 +82,7 @@ Shows how long tasks took to complete:
 │  │ ❌ Client Meeting             │ │
 │  │    [Medium Priority]          │ │
 │  │    ────────────────────────   │ │
-│  │    ✗ Cancelled  📅 Oct 19    │ │
+│  │    ✗ Expired  📅 Oct 19    │ │
 │  └───────────────────────────────┘ │
 │                                     │
 └─────────────────────────────────────┘
@@ -90,7 +90,7 @@ Shows how long tasks took to complete:
 
 ### **Color Coding:**
 - **Completed Tasks**: Green border, green icon ✅
-- **Cancelled Tasks**: Red border, red icon ❌
+- **Expired Tasks**: Red border, red icon ❌
 - **High Priority**: Red badge
 - **Medium Priority**: Orange badge
 - **Low Priority**: Green badge
@@ -116,7 +116,7 @@ Shows how long tasks took to complete:
 - `_formatDuration()` - Smart duration formatter
 
 **Features:**
-- Filter by status (all/completed/cancelled)
+ - Filter by status (all/completed/expired)
 - Sort by date or priority
 - Pull-to-refresh
 - Tap to view details
@@ -225,7 +225,7 @@ Display Task Cards
 
 ### **2. Filter Chips**
 ```dart
-[All] [Completed] [Cancelled]
+[All] [Completed] [Expired]
 ```
 - Clickable chips
 - Selected chip highlighted in primary color
@@ -256,18 +256,18 @@ No completed tasks yet
 Complete some tasks to see them here
 ```
 
-#### **No Cancelled Tasks:**
+#### **No Expired Tasks:**
 ```
-       ⭕
-No cancelled tasks
-Cancelled tasks will appear here
+  ⭕
+No expired tasks
+Expired tasks will appear here
 ```
 
 #### **No History:**
 ```
        🕒
 No task history
-Your completed and cancelled tasks will appear here
+Your completed and expired tasks will appear here
 ```
 
 ---
@@ -343,11 +343,11 @@ String _formatDuration(DateTime start, DateTime end) {
 5. Verify duration is calculated correctly
 
 ### **Test 2: Filter Functionality** ✅
-1. Have both completed and cancelled tasks
+1. Have both completed and expired tasks
 2. Tap "Completed" filter
 3. Verify only completed tasks show
-4. Tap "Cancelled" filter
-5. Verify only cancelled tasks show
+4. Tap "Expired" filter
+5. Verify only expired tasks show
 6. Tap "All" filter
 7. Verify both types show
 
@@ -442,7 +442,7 @@ String _formatDuration(DateTime start, DateTime end) {
 - ✅ Removed Map tab from bottom navigation
 - ✅ Added History tab with history icon
 - ✅ Created comprehensive History page
-- ✅ Added filtering (all/completed/cancelled)
+- ✅ Added filtering (all/completed/expired)
 - ✅ Added sorting (recent/oldest/priority)
 - ✅ Rich task cards with details
 - ✅ Duration calculation
@@ -460,7 +460,7 @@ String _formatDuration(DateTime start, DateTime end) {
 - 💾 Works perfectly offline
 
 ### **Result:**
-**Users now have a dedicated History section to review all their completed and cancelled tasks with rich details and insights!** 🎉
+**Users now have a dedicated History section to review all their completed and expired tasks with rich details and insights!** 🎉
 
 ---
 
@@ -471,7 +471,7 @@ String _formatDuration(DateTime start, DateTime end) {
 ┌─────────────────────────────────────┐
 │  Task History              [Sort ▼] │
 ├─────────────────────────────────────┤
-│  [All] [Completed] [Cancelled]      │
+│  [All] [Completed] [Expired]      │
 ├─────────────────────────────────────┤
 │                                      │
 │  ✅ Deploy to Production             │
