@@ -7,12 +7,11 @@ part 'sync_queue_dao.g.dart';
 @DriftAccessor(tables: [SyncQueue])
 class SyncQueueDao extends DatabaseAccessor<AppDatabase>
     with _$SyncQueueDaoMixin {
-  SyncQueueDao(AppDatabase db) : super(db);
+  SyncQueueDao(super.db);
 
   // Get all pending sync items
   Future<List<SyncQueueEntity>> getPendingSyncItems() {
-    return (select(syncQueue)
-      ..orderBy([(t) => OrderingTerm.asc(t.timestamp)]))
+    return (select(syncQueue)..orderBy([(t) => OrderingTerm.asc(t.timestamp)]))
         .get();
   }
 
@@ -49,7 +48,7 @@ class SyncQueueDao extends DatabaseAccessor<AppDatabase>
   // Get queue count
   Future<int> getQueueCount() async {
     final result = await (selectOnly(syncQueue)
-      ..addColumns([syncQueue.id.count()]))
+          ..addColumns([syncQueue.id.count()]))
         .getSingle();
     return result.read(syncQueue.id.count()) ?? 0;
   }

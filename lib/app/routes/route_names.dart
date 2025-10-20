@@ -6,6 +6,7 @@ class RouteNames {
   // Main Routes
   static const String home = '/home';
   static const String taskList = '/tasks';
+  static const String history = '/history';
   static const String taskDetail = '/tasks/:id';
   static const String createTask = '/tasks/create';
   static const String editTask = '/tasks/:id/edit';

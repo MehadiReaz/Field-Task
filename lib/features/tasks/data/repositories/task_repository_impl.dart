@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:dartz/dartz.dart' hide Task;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/enums/task_status.dart';
+import '../../../../core/enums/sync_status.dart';
+import '../../../../core/network/network_info.dart';
+import '../../../../database/database.dart';
 import '../datasources/task_remote_datasource.dart';
 import '../datasources/task_local_datasource.dart';
 import '../models/task_model.dart';
@@ -13,10 +18,14 @@ import '../../domain/repositories/task_repository.dart';
 class TaskRepositoryImpl implements TaskRepository {
   final TaskRemoteDataSource remoteDataSource;
   final TaskLocalDataSource localDataSource;
+  final NetworkInfo networkInfo;
+  final AppDatabase database;
 
   TaskRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
+    required this.networkInfo,
+    required this.database,
   });
 
   // Helper method to convert Task entity to TaskModel
@@ -54,6 +63,24 @@ class TaskRepositoryImpl implements TaskRepository {
       await localDataSource.saveTask(task);
     } catch (_) {
       // Silently ignore cache failures
+    }
+  }
+
+  // Helper method to add operation to sync queue
+  Future<void> _addToSyncQueue(
+      String taskId, String operation, String payload) async {
+    try {
+      await database.syncQueueDao.addToQueue(
+        SyncQueueCompanion.insert(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          taskId: taskId,
+          operation: operation,
+          payload: payload,
+          timestamp: DateTime.now(),
+        ),
+      );
+    } catch (_) {
+      // Silently ignore queue failures
     }
   }
 
@@ -100,12 +127,35 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<Either<Failure, Task>> getTaskById(String id) async {
-    try {
-      final task = await remoteDataSource.getTaskById(id);
-      await _cacheTaskSilently(task);
-      return Right(task);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
+    final isConnected = await networkInfo.isConnected;
+
+    if (isConnected) {
+      // Online: Fetch from server
+      try {
+        final task = await remoteDataSource.getTaskById(id);
+        await _cacheTaskSilently(task);
+        return Right(task);
+      } catch (e) {
+        // If server fails, try local cache as fallback
+        try {
+          final localTask = await localDataSource.getTaskById(id);
+          if (localTask != null) {
+            return Right(localTask);
+          }
+        } catch (_) {}
+        return Left(ServerFailure(e.toString()));
+      }
+    } else {
+      // Offline: Fetch from local database
+      try {
+        final localTask = await localDataSource.getTaskById(id);
+        if (localTask != null) {
+          return Right(localTask);
+        }
+        return Left(CacheFailure('Task not found in local database'));
+      } catch (e) {
+        return Left(CacheFailure(e.toString()));
+      }
     }
   }
 
@@ -148,7 +198,7 @@ class TaskRepositoryImpl implements TaskRepository {
         // Cache deletion failure is non-critical
       }
 
-      return Right(null);
+      return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -161,23 +211,64 @@ class TaskRepositoryImpl implements TaskRepository {
     double longitude,
     String? photoUrl,
   ) async {
-    try {
-      final task = await remoteDataSource.checkInTask(
-        id,
-        latitude,
-        longitude,
-        photoUrl,
-      );
+    // Check if online
+    final isConnected = await networkInfo.isConnected;
 
+    if (isConnected) {
+      // Online: Send to server immediately
       try {
-        await localDataSource.updateTask(task);
-      } catch (_) {
-        // Cache update failure is non-critical
-      }
+        final task = await remoteDataSource.checkInTask(
+          id,
+          latitude,
+          longitude,
+          photoUrl,
+        );
 
-      return Right(task);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
+        try {
+          await localDataSource.updateTask(task);
+        } catch (_) {
+          // Cache update failure is non-critical
+        }
+
+        return Right(task);
+      } catch (e) {
+        return Left(ServerFailure(e.toString()));
+      }
+    } else {
+      // Offline: Update local database and queue for sync
+      try {
+        final localTask = await localDataSource.getTaskById(id);
+
+        if (localTask == null) {
+          return Left(CacheFailure('Task not found in local database'));
+        }
+
+        final updatedTask = localTask.copyWith(
+          status: TaskStatus.checkedIn,
+          latitude: latitude,
+          longitude: longitude,
+          checkedInAt: DateTime.now(),
+          checkInPhotoUrl: photoUrl,
+          syncStatus: SyncStatus.pending,
+          updatedAt: DateTime.now(),
+        );
+
+        await localDataSource.updateTask(_toModel(updatedTask));
+
+        // Add to sync queue with specific check-in data
+        final payload = json.encode({
+          'taskId': id,
+          'locationLat': latitude,
+          'locationLng': longitude,
+          'checkInPhotoUrl': photoUrl,
+        });
+        await _addToSyncQueue(id, 'check_in', payload);
+
+        return Right(updatedTask);
+      } catch (e) {
+        return Left(
+            CacheFailure('Failed to check-in offline: ${e.toString()}'));
+      }
     }
   }
 
@@ -204,22 +295,61 @@ class TaskRepositoryImpl implements TaskRepository {
     String? completionNotes,
     String? photoUrl,
   ) async {
-    try {
-      final task = await remoteDataSource.completeTask(
-        id,
-        completionNotes,
-        photoUrl,
-      );
+    // Check if online
+    final isConnected = await networkInfo.isConnected;
 
+    if (isConnected) {
+      // Online: Send to server immediately
       try {
-        await localDataSource.updateTask(task);
-      } catch (_) {
-        // Cache update failure is non-critical
-      }
+        final task = await remoteDataSource.completeTask(
+          id,
+          completionNotes,
+          photoUrl,
+        );
 
-      return Right(task);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
+        try {
+          await localDataSource.updateTask(task);
+        } catch (_) {
+          // Cache update failure is non-critical
+        }
+
+        return Right(task);
+      } catch (e) {
+        return Left(ServerFailure(e.toString()));
+      }
+    } else {
+      // Offline: Update local database and queue for sync
+      try {
+        final localTask = await localDataSource.getTaskById(id);
+
+        if (localTask == null) {
+          return Left(CacheFailure('Task not found in local database'));
+        }
+
+        final updatedTask = localTask.copyWith(
+          status: TaskStatus.completed,
+          completedAt: DateTime.now(),
+          completionNotes: completionNotes,
+          completionPhotoUrl: photoUrl,
+          syncStatus: SyncStatus.pending,
+          updatedAt: DateTime.now(),
+        );
+
+        await localDataSource.updateTask(_toModel(updatedTask));
+
+        // Add to sync queue with specific completion data
+        final payload = json.encode({
+          'taskId': id,
+          'completionNotes': completionNotes,
+          'completionPhotoUrl': photoUrl,
+        });
+        await _addToSyncQueue(id, 'complete', payload);
+
+        return Right(updatedTask);
+      } catch (e) {
+        return Left(
+            CacheFailure('Failed to complete offline: ${e.toString()}'));
+      }
     }
   }
 

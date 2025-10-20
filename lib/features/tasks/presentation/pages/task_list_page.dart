@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/task.dart';
+import '../../../sync/presentation/widgets/sync_status_indicator.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
@@ -257,6 +258,9 @@ class _TaskListViewState extends State<TaskListView> {
               },
               child: Column(
                 children: [
+                  // Sync Status Indicator
+                  const SyncStatusIndicator(),
+
                   // Search Bar
                   Container(
                     padding: const EdgeInsets.all(16),

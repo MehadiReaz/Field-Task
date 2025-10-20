@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart' hide Task;
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
@@ -32,7 +33,7 @@ class SearchTasks implements UseCase<List<Task>, SearchTasksParams> {
       }
 
       // If server fails, fall back to local database
-      print('⚠️ Server search failed, falling back to local database');
+      debugPrint('⚠️ Server search failed, falling back to local database');
     }
 
     // Search local database (offline fallback)

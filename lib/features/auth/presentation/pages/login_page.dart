@@ -57,12 +57,12 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticatedState) {
-            print(
+            debugPrint(
                 '🔍 Login: User authenticated. SelectedAreaId: ${state.user.selectedAreaId}');
 
             // Check if user has selected an area
             if (state.user.selectedAreaId == null) {
-              print('⚠️ Login: No area selected, showing dialog');
+              debugPrint('⚠️ Login: No area selected, showing dialog');
 
               // Wait a bit to ensure the widget tree is built
               await Future.delayed(const Duration(milliseconds: 300));
@@ -70,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
               if (!mounted) return;
 
               // Show area selection dialog
-              // print('📱 Login: Showing area selection dialog');
+              // debugPrint('📱 Login: Showing area selection dialog');
               // final result = await showDialog<bool>(
               //   context: context,
               //   barrierDismissible: false,
@@ -80,17 +80,17 @@ class _LoginPageState extends State<LoginPage> {
               //   ),
               // );
 
-              // print('✅ Login: Dialog result: $result');
+              // debugPrint('✅ Login: Dialog result: $result');
 
               // if (result == true && mounted) {
               //   // Area selected, refresh user data and proceed to home
-              //   print(
+              //   debugPrint(
               //       '✅ Login: Area selected, refreshing user and navigating to home');
               //   context.read<AuthBloc>().add(GetCurrentUserEvent());
               //   context.go(RouteNames.home);
               // } else if (mounted) {
               //   // If dialog was somehow dismissed without selection, show error
-              //   print('❌ Login: Dialog dismissed without selection');
+              //   debugPrint('❌ Login: Dialog dismissed without selection');
               //   ScaffoldMessenger.of(context).showSnackBar(
               //     const SnackBar(
               //       content: Text('You must select an area to continue'),
@@ -100,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
               // }
             } else {
               // User has area selected, navigate to home
-              print('✅ Login: User has area, navigating to home');
+              debugPrint('✅ Login: User has area, navigating to home');
               context.go(RouteNames.home);
             }
           }
@@ -134,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 32),
 
                   // Welcome Text
-                  Text(
+                  const Text(
                     'Welcome Back',
                     style: AppTextStyles.h2,
                     textAlign: TextAlign.center,

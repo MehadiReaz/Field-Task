@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 /// Helper utility to parse DateTime from various sources including Firestore Timestamps
 class TimestampHelper {
   /// Parse DateTime from various formats (Firestore Timestamp, ISO8601 String, etc)
@@ -16,7 +18,7 @@ class TimestampHelper {
       try {
         return DateTime.parse(value);
       } catch (e) {
-        print('Failed to parse DateTime string: $value, error: $e');
+        debugPrint('Failed to parse DateTime string: $value, error: $e');
         return DateTime.now();
       }
     }
@@ -30,7 +32,7 @@ class TimestampHelper {
           return value.toDate() as DateTime;
         }
       } catch (e) {
-        print('Failed to convert Firestore Timestamp to DateTime: $e');
+        debugPrint('Failed to convert Firestore Timestamp to DateTime: $e');
       }
     }
 

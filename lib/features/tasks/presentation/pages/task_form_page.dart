@@ -217,55 +217,6 @@ class _TaskFormViewState extends State<TaskFormView> {
 
                   const SizedBox(height: 16),
 
-                  /* COMMENTED OUT: Area concept not used in this project
-                  // Area Display (Read-only - from user's selected area)
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, authState) {
-                      String areaName = 'Loading area...';
-                      if (authState is AuthAuthenticatedState) {
-                        areaName = authState.user.selectedAreaName ??
-                            'No area selected';
-                      }
-
-                      return InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Working Area',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.location_city),
-                          helperText:
-                              'You are working within your selected area',
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: Colors.green[600],
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  areaName,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-                  */
-
                   // Location Selection
                   Card(
                     elevation: 2,
@@ -430,19 +381,6 @@ class _TaskFormViewState extends State<TaskFormView> {
 
     final user = authState.user;
 
-    /* COMMENTED OUT: Area concept not used in this project
-    // Check that user has selected an area
-    if (user.selectedAreaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select an area before creating a task'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    */
-
     // Use selected location or default coordinates
     double latitude = _selectedLatitude ?? 0.0;
     double longitude = _selectedLongitude ?? 0.0;
@@ -465,7 +403,6 @@ class _TaskFormViewState extends State<TaskFormView> {
       latitude: latitude,
       longitude: longitude,
       address: _selectedAddress,
-      // areaId: user.selectedAreaId, // COMMENTED OUT: Not used in this project
       assignedToId: user.id,
       assignedToName: user.displayName,
       createdById: user.id,

@@ -210,7 +210,7 @@ class TaskDetailView extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.map,
                         color: Colors.blue,
                       ),
@@ -654,7 +654,7 @@ class TaskDetailView extends StatelessWidget {
 // Slider widget for completing task
 class _CompleteTaskSlider extends StatefulWidget {
   final VoidCallback onComplete;
-  const _CompleteTaskSlider({required this.onComplete, super.key});
+  const _CompleteTaskSlider({required this.onComplete});
 
   @override
   State<_CompleteTaskSlider> createState() => _CompleteTaskSliderState();

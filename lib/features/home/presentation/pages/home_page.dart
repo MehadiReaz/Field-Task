@@ -4,9 +4,7 @@ import '../../../../injection_container.dart';
 import '../../../tasks/presentation/bloc/task_bloc.dart';
 import '../../../tasks/presentation/bloc/task_event.dart';
 import '../../../tasks/presentation/pages/task_list_page.dart';
-import '../../../location/presentation/pages/full_map_page.dart';
-import '../../../areas/presentation/bloc/area_bloc.dart';
-import '../../../areas/presentation/pages/areas_list_page.dart';
+import '../../../tasks/presentation/pages/history_page.dart';
 import '../../../auth/presentation/pages/profile_page.dart';
 import 'dashboard_page.dart';
 
@@ -75,17 +73,11 @@ class _HomePageState extends State<HomePage> {
             child: const TaskListView(),
           ),
 
-          // Map
+          // History
           BlocProvider(
-            create: (context) =>
-                getIt<TaskBloc>()..add(const LoadMyTasksEvent()),
-            child: const FullMapPage(),
-          ),
-
-          // Areas
-          BlocProvider(
-            create: (context) => getIt<AreaBloc>()..add(const LoadAreasEvent()),
-            child: const AreasListPage(),
+            create: (context) => getIt<TaskBloc>()
+              ..add(const LoadTasksByStatusEvent('completed')),
+            child: const HistoryPage(),
           ),
 
           // Profile
@@ -115,14 +107,9 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'My Tasks',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.map),
-            label: 'Map',
-            tooltip: 'View Map',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.location_city),
-            label: 'Areas',
-            tooltip: 'Manage Areas',
+            icon: Icon(Icons.history),
+            label: 'History',
+            tooltip: 'Task History',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

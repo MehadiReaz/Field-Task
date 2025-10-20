@@ -3,10 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes/route_names.dart';
-import '../../../../injection_container.dart';
-import '../../../areas/presentation/bloc/area_bloc.dart';
 import '../bloc/auth_bloc.dart';
-import '../widgets/area_selection_dialog.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -104,33 +101,6 @@ class ProfilePage extends StatelessWidget {
                         '${user.createdAt.day}/${user.createdAt.month}/${user.createdAt.year}',
                       ),
                     ),
-                    // const SizedBox(height: 24),
-                    // const Text(
-                    //   'Work Area',
-                    //   style: TextStyle(
-                    //     fontSize: 18,
-                    //     fontWeight: FontWeight.bold,
-                    //   ),
-                    // ),
-                    // const SizedBox(height: 16),
-                    // ListTile(
-                    //   leading: const Icon(Icons.location_city),
-                    //   title: const Text('Selected Area'),
-                    //   subtitle: Text(
-                    //     user.selectedAreaName != null
-                    //         ? user.selectedAreaName!
-                    //         : 'No area selected',
-                    //   ),
-                    //   trailing: SizedBox(
-                    //     width: 100,
-                    //     child: ElevatedButton.icon(
-                    //       onPressed: () => _showChangeAreaDialog(context),
-                    //       icon: const Icon(Icons.edit, size: 16),
-                    //       label: const Text('Change',
-                    //           style: TextStyle(fontSize: 12)),
-                    //     ),
-                    //   ),
-                    // ),
                   ],
                 ),
               );
@@ -143,16 +113,6 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-
-  // void _showChangeAreaDialog(BuildContext context) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (dialogContext) => BlocProvider(
-  //       create: (context) => getIt<AreaBloc>(),
-  //       child: const AreaSelectionDialog(isRequired: false),
-  //     ),
-  //   );
-  // }
 }
 
 // Helper function to show logout confirmation

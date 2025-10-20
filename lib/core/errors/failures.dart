@@ -80,8 +80,7 @@ class NetworkFailure extends SyncFailure {
 }
 
 class ServerFailure extends SyncFailure {
-  const ServerFailure([String message = 'Server error occurred'])
-      : super(message);
+  const ServerFailure([super.message = 'Server error occurred']);
 }
 
 // Cache Failures

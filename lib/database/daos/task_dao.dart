@@ -6,7 +6,7 @@ part 'task_dao.g.dart';
 
 @DriftAccessor(tables: [Tasks])
 class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
-  TaskDao(AppDatabase db) : super(db);
+  TaskDao(super.db);
 
   // Get all tasks for a user
   Stream<List<TaskEntity>> watchTasksByUserId(String userId) {

@@ -13,7 +13,6 @@ class Task extends Equatable {
   final double latitude;
   final double longitude;
   final String? address;
-  // final String? areaId; // Area this task belongs to - COMMENTED OUT: Not used in this project
   final String assignedToId;
   final String assignedToName;
   final String createdById;
@@ -41,7 +40,6 @@ class Task extends Equatable {
     required this.latitude,
     required this.longitude,
     this.address,
-    // this.areaId, // COMMENTED OUT: Not used in this project
     required this.assignedToId,
     required this.assignedToName,
     required this.createdById,
@@ -71,7 +69,6 @@ class Task extends Equatable {
         latitude,
         longitude,
         address,
-        // areaId, // COMMENTED OUT: Not used in this project
         assignedToId,
         assignedToName,
         createdById,
@@ -100,7 +97,6 @@ class Task extends Equatable {
     double? latitude,
     double? longitude,
     String? address,
-    // String? areaId, // COMMENTED OUT: Not used in this project
     String? assignedToId,
     String? assignedToName,
     String? createdById,
@@ -128,7 +124,6 @@ class Task extends Equatable {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       address: address ?? this.address,
-      // areaId: areaId ?? this.areaId, // COMMENTED OUT: Not used in this project
       assignedToId: assignedToId ?? this.assignedToId,
       assignedToName: assignedToName ?? this.assignedToName,
       createdById: createdById ?? this.createdById,

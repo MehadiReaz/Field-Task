@@ -10,6 +10,7 @@ import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/tasks/presentation/pages/task_list_page.dart';
 import '../../features/tasks/presentation/pages/task_detail_page.dart';
 import '../../features/tasks/presentation/pages/task_form_page.dart';
+import '../../features/tasks/presentation/pages/history_page.dart';
 import '../../features/location/presentation/pages/map_selection_page.dart';
 import '../../features/location/presentation/pages/full_map_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -56,6 +57,10 @@ class AppRouter {
       GoRoute(
         path: RouteNames.taskList,
         builder: (context, state) => const TaskListPage(),
+      ),
+      GoRoute(
+        path: RouteNames.history,
+        builder: (context, state) => const HistoryPage(),
       ),
       GoRoute(
         path: RouteNames.taskDetail,

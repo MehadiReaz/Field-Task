@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 
 @lazySingleton
@@ -36,7 +37,7 @@ class ConnectivityService {
       final result = await _connectivity.checkConnectivity();
       _updateStatus(result);
     } catch (e) {
-      print('Error checking connectivity: $e');
+      debugPrint('Error checking connectivity: $e');
       _statusController?.add(ConnectivityStatus.offline);
     }
   }

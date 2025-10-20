@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/enums/task_priority.dart';
 import '../../../../core/utils/date_time_utils.dart';
 import '../../domain/entities/task.dart';
+import '../../../sync/presentation/widgets/sync_status_badge.dart';
 import 'task_status_badge.dart';
 
 class TaskCard extends StatelessWidget {
@@ -85,11 +86,17 @@ class TaskCard extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // Bottom row: Status, Due Date
+              // Bottom row: Status, Due Date, Sync Status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  TaskStatusBadge(status: task.status, compact: true),
+                  Row(
+                    children: [
+                      TaskStatusBadge(status: task.status, compact: true),
+                      const SizedBox(width: 8),
+                      SyncStatusBadge(status: task.syncStatus, size: 14),
+                    ],
+                  ),
                   Row(
                     children: [
                       Icon(

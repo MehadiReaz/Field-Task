@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import 'package:drift/drift.dart';
 import '../../../../database/database.dart';
@@ -153,10 +154,10 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
       // Sort by createdAt descending
       result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      print('✅ Found ${result.length} tasks locally matching "$query"');
+      debugPrint('✅ Found ${result.length} tasks locally matching "$query"');
       return result;
     } catch (e) {
-      print('⚠️ Failed to search tasks locally: $e');
+      debugPrint('⚠️ Failed to search tasks locally: $e');
       // Return empty list on error (graceful fallback)
       return [];
     }

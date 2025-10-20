@@ -26,12 +26,12 @@ class _SplashPageState extends State<SplashPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) async {
         if (state is AuthAuthenticatedState) {
-          print('✅ Splash: User authenticated.');
+          debugPrint('✅ Splash: User authenticated.');
 
           // 🚫 Commented out area selection logic
           /*
           if (state.user.selectedAreaId == null) {
-            print('⚠️ Splash: No area selected, showing dialog');
+            debugPrint('⚠️ Splash: No area selected, showing dialog');
             await Future.delayed(const Duration(milliseconds: 300));
             if (!mounted) return;
 
@@ -62,7 +62,7 @@ class _SplashPageState extends State<SplashPage> {
           // ✅ Directly navigate to home if logged in
           context.go(RouteNames.home);
         } else if (state is AuthUnauthenticatedState) {
-          print('🔒 Splash: User not authenticated, navigating to login');
+          debugPrint('🔒 Splash: User not authenticated, navigating to login');
           context.go(RouteNames.login);
         }
       },

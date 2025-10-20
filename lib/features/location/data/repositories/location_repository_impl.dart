@@ -100,7 +100,7 @@ class LocationRepositoryImpl implements LocationRepository {
       final granted = await dataSource.requestLocationPermission();
       return Right(granted);
     } catch (e) {
-      return Left(LocationPermissionDeniedFailure());
+      return const Left(LocationPermissionDeniedFailure());
     }
   }
 
@@ -110,7 +110,7 @@ class LocationRepositoryImpl implements LocationRepository {
       final granted = await dataSource.checkLocationPermission();
       return Right(granted);
     } catch (e) {
-      return Left(LocationPermissionDeniedFailure());
+      return const Left(LocationPermissionDeniedFailure());
     }
   }
 
@@ -120,7 +120,7 @@ class LocationRepositoryImpl implements LocationRepository {
       final enabled = await dataSource.isLocationServiceEnabled();
       return Right(enabled);
     } catch (e) {
-      return Left(LocationServiceDisabledFailure());
+      return const Left(LocationServiceDisabledFailure());
     }
   }
 }

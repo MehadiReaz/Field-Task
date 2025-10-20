@@ -37,7 +37,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   ) async {
     emit(const LocationLoading());
 
-    final result = await getCurrentLocation(NoParams());
+    final result = await getCurrentLocation(const NoParams());
 
     result.fold(
       (failure) => emit(LocationError(failure.message)),
@@ -49,7 +49,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     RequestPermissionEvent event,
     Emitter<LocationState> emit,
   ) async {
-    final result = await requestLocationPermission(NoParams());
+    final result = await requestLocationPermission(const NoParams());
 
     result.fold(
       (failure) => emit(const LocationPermissionDenied()),

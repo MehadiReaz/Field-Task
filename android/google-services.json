@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "609949484977",
+    "project_id": "tasktrackr-f106e",
+    "storage_bucket": "tasktrackr-f106e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:609949484977:android:629c9ad9fa60602c781f90",
+        "android_client_info": {
+          "package_name": "com.task_trackr.app.task_trackr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "609949484977-0tamvl94n2e2osjagcgeqeofvqpnt34i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.task_trackr.app.task_trackr",
+            "certificate_hash": "830814fdc0d81129a94e99dab15a853482fb5862"
+          }
+        },
+        {
+          "client_id": "609949484977-rjgfvnrmiqavl8g1t1flv69ar0oqd2im.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzeQXx_4NtcUGLwbHZoshrtgW_jcNUxDg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "609949484977-rjgfvnrmiqavl8g1t1flv69ar0oqd2im.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "609949484977-67fdkmsioqvkeg127mslj52un5fh1ag0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tasktrackr.app.taskTrackr"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

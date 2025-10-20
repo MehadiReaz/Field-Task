@@ -40,7 +40,7 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
         longitude: widget.initialLng!,
       ));
     } else {
-      _locationBloc.add(GetCurrentLocationEvent());
+      _locationBloc.add(const GetCurrentLocationEvent());
     }
   }
 
@@ -64,7 +64,7 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
   }
 
   void _getCurrentLocation() {
-    _locationBloc.add(GetCurrentLocationEvent());
+    _locationBloc.add(const GetCurrentLocationEvent());
   }
 
   void _confirmSelection() {

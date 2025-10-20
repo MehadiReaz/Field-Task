@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
 
@@ -67,20 +68,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw const AuthException('Failed to sign in with Google');
       }
 
-      print('✅ Firebase user created: ${userCredential.user!.uid}');
-      print('📧 Email: ${userCredential.user!.email}');
-      print('👤 Display name: ${userCredential.user!.displayName}');
+      debugPrint('✅ Firebase user created: ${userCredential.user!.uid}');
+      debugPrint('📧 Email: ${userCredential.user!.email}');
+      debugPrint('👤 Display name: ${userCredential.user!.displayName}');
 
       // Create or update user in Firestore
       final userModel = await _createOrUpdateUser(userCredential.user!);
 
-      print('✅ User document created/updated in Firestore');
+      debugPrint('✅ User document created/updated in Firestore');
       return userModel;
     } on firebase_auth.FirebaseAuthException catch (e) {
-      print('❌ Firebase Auth Error: ${e.message}');
+      debugPrint('❌ Firebase Auth Error: ${e.message}');
       throw AuthException(e.message ?? 'Google sign-in failed');
     } catch (e) {
-      print('❌ Google sign-in error: $e');
+      debugPrint('❌ Google sign-in error: $e');
       throw AuthException('Google sign-in failed: $e');
     }
   }
@@ -165,7 +166,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           areaName = areaDoc.data()?['name'] ?? areaId;
         }
       } catch (e) {
-        print('Warning: Could not fetch area name: $e');
+        debugPrint('Warning: Could not fetch area name: $e');
         // Continue with just the ID if we can't get the name
       }
 
@@ -221,7 +222,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         final now = DateTime.now();
 
         if (!docSnapshot.exists) {
-          print('🆕 Creating new user document for: ${firebaseUser.uid}');
+          debugPrint('🆕 Creating new user document for: ${firebaseUser.uid}');
           final newUser = UserModel(
             id: firebaseUser.uid,
             email: firebaseUser.email ?? '',
@@ -234,10 +235,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           );
 
           await userDoc.set(newUser.toFirestore());
-          print('✅ User document created successfully');
+          debugPrint('✅ User document created successfully');
           return newUser;
         } else {
-          print('🔄 Updating existing user document for: ${firebaseUser.uid}');
+          debugPrint(
+              '🔄 Updating existing user document for: ${firebaseUser.uid}');
           final existingData = docSnapshot.data()!;
           final existingUser = UserModel.fromFirestore(existingData);
 
@@ -260,13 +262,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
             'photoUrl': updatedUser.photoUrl,
             'updatedAt': updatedUser.updatedAt.toIso8601String(),
           });
-          print('✅ User document updated successfully');
+          debugPrint('✅ User document updated successfully');
 
           return updatedUser;
         }
       } on FirebaseException catch (e) {
         if (e.code == 'unavailable' && i < retries - 1) {
-          print(
+          debugPrint(
               '⚠️ Firestore unavailable, retrying in ${delay}ms... (${i + 1}/$retries)');
           await Future.delayed(Duration(milliseconds: delay));
           delay *= 2; // Exponential backoff
