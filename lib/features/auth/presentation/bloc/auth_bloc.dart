@@ -3,6 +3,8 @@ import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../../../core/usecases/usecase.dart';
+import '../../../../core/services/dashboard_service.dart';
+import '../../../../core/utils/logger.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/usecases/check_auth_status.dart';
 import '../../domain/usecases/get_current_user.dart';
@@ -20,6 +22,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignOut signOut;
   final GetCurrentUser getCurrentUser;
   final CheckAuthStatus checkAuthStatus;
+  final DashboardService dashboardService;
 
   AuthBloc({
     required this.signInWithGoogle,
@@ -27,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.signOut,
     required this.getCurrentUser,
     required this.checkAuthStatus,
+    required this.dashboardService,
   }) : super(AuthInitialState()) {
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<SignInWithGoogleEvent>(_onSignInWithGoogle);
@@ -55,6 +59,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               emit(AuthUnauthenticatedState());
             },
             (user) {
+              // Initialize dashboard on successful auth
+              _initializeDashboard();
               emit(AuthAuthenticatedState(user: user));
             },
           );
@@ -94,7 +100,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthErrorState(message: failure.message)),
-      (user) => emit(AuthAuthenticatedState(user: user)),
+      (user) {
+        // Initialize dashboard on successful login
+        _initializeDashboard();
+        emit(AuthAuthenticatedState(user: user));
+      },
     );
   }
 
@@ -119,8 +129,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await getCurrentUser(const NoParams());
 
     result.fold(
-      (failure) => emit(AuthUnauthenticatedState()),
+      (failure) => emit(AuthErrorState(message: failure.message)),
       (user) => emit(AuthAuthenticatedState(user: user)),
     );
+  }
+
+  /// Initialize dashboard with counts on login
+  void _initializeDashboard() {
+    // Run in background without blocking login
+    dashboardService.initializeDashboard().then((_) {
+      return dashboardService.recalculateAllCounts();
+    }).then((_) {
+      AppLogger.info('Dashboard initialized and counts recalculated');
+    }).catchError((error) {
+      AppLogger.error('Failed to initialize dashboard: $error');
+    });
   }
 }

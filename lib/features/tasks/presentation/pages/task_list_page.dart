@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../injection_container.dart';
 import '../../../../core/services/expired_tasks_checker_service.dart';
@@ -44,7 +46,7 @@ class _TaskListViewState extends State<TaskListView>
   bool _isSearchFocused = false;
 
   final List<Map<String, dynamic>> _filters = [
-    {'value': 'all', 'label': 'All', 'icon': Icons.list, 'color': Colors.blue},
+    // {'value': 'all', 'label': 'All', 'icon': Icons.list, 'color': Colors.blue},
     {
       'value': 'pending',
       'label': 'Pending',
@@ -136,11 +138,47 @@ class _TaskListViewState extends State<TaskListView>
     final bloc = context.read<TaskBloc>();
 
     if (filter == 'expired') {
-      bloc.add(const LoadExpiredTasksEvent(useLocal: false));
+      bloc.add(LoadTasksByStatusEvent(filter));
     } else if (filter == 'all') {
       bloc.add(const LoadMyTasksEvent(isRefresh: true));
     } else {
       bloc.add(LoadTasksByStatusEvent(filter));
+    }
+  }
+
+  DateTime? _lastPressedAt;
+
+  /// Intercept back button presses and clear the active filter first.
+  ///
+  /// When a filter other than 'all' is active we consume the back event,
+  /// reset the filter to 'all' and reload the tasks. Only when the filter
+  /// is already 'all' do we allow the navigation to proceed.
+  Future<bool> _onWillPop(BuildContext context) async {
+    if (_currentFilter != 'all') {
+      log('Clearing active filter before popping');
+      _applyFilter('all');
+      setState(() {
+        _currentFilter = 'all';
+      });
+      return false; // Prevent pop
+    } else {
+      // Handle double tap to exit
+      final now = DateTime.now();
+      if (_lastPressedAt == null ||
+          now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+        _lastPressedAt = now;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tap again to exit'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return false; // Prevent exit on first tap
+      } else {
+        SystemNavigator.pop();
+        return false; // no need to return true since we handle exit
+      }
     }
   }
 
@@ -162,202 +200,212 @@ class _TaskListViewState extends State<TaskListView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Tasks'),
-        elevation: 0,
-        actions: [
-          // Expired Tasks Badge
-          FutureBuilder<int>(
-            future: getIt<ExpiredTasksCheckerService>().getExpiredTasksCount(),
-            builder: (context, snapshot) {
-              final expiredCount = snapshot.data ?? 0;
-              if (expiredCount == 0) return const SizedBox.shrink();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        final shouldPop = await _onWillPop(context);
+        if (shouldPop) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Tasks'),
+          elevation: 0,
+          actions: [
+            // Expired Tasks Badge
+            FutureBuilder<int>(
+              future:
+                  getIt<ExpiredTasksCheckerService>().getExpiredTasksCount(),
+              builder: (context, snapshot) {
+                final expiredCount = snapshot.data ?? 0;
+                if (expiredCount == 0) return const SizedBox.shrink();
 
-              return Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: InkWell(
-                  onTap: () {
-                    // Switch to expired filter
-                    setState(() {
-                      _currentFilter = 'expired';
-                    });
-                    context.read<TaskBloc>().add(
-                          const LoadExpiredTasksEvent(),
-                        );
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.red, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.warning_rounded,
-                          color: Colors.red,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$expiredCount',
-                          style: const TextStyle(
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: InkWell(
+                    onTap: () {
+                      // Switch to expired filter
+                      setState(() {
+                        _currentFilter = 'expired';
+                      });
+                      context.read<TaskBloc>().add(
+                            const LoadExpiredTasksEvent(),
+                          );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.red, width: 1.5),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.warning_rounded,
                             color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            '$expiredCount',
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        body: BlocConsumer<TaskBloc, TaskState>(
+          listener: (context, state) {
+            if (state is TaskError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(state.message)),
+                    ],
+                  ),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               );
-            },
-          ),
-        ],
-      ),
-      body: BlocConsumer<TaskBloc, TaskState>(
-        listener: (context, state) {
-          if (state is TaskError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
+            }
+          },
+          builder: (context, state) {
+            if (state is TaskLoading) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(state.message)),
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1000),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: 0.8 + (value * 0.2),
+                          child: Opacity(
+                            opacity: value,
+                            child: const CircularProgressIndicator(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 800),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: const Text('Loading tasks...'),
+                        );
+                      },
+                    ),
                   ],
                 ),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+              );
+            }
+
+            if (state is TasksEmpty) {
+              return _buildEmptyState(
+                icon: Icons.task_alt,
+                title: 'No tasks found',
+                subtitle: 'Tasks assigned to you will appear here',
+              );
+            }
+
+            if (state is TasksLoaded || state is TaskRefreshing) {
+              final tasks = state is TasksLoaded
+                  ? state.tasks
+                  : (state as TaskRefreshing).currentTasks;
+              final hasMore = state is TasksLoaded
+                  ? state.hasMore
+                  : (state as TaskRefreshing).hasMore;
+
+              _filteredTasks = _getFilteredTasks(tasks);
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context
+                      .read<TaskBloc>()
+                      .add(const LoadMyTasksEvent(isRefresh: true));
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+                child: Column(
+                  children: [
+                    // Sync Status Indicator with Animation
+                    SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, -1),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: _headerController,
+                        curve: Curves.easeOut,
+                      )),
+                      child: const SyncStatusIndicator(),
+                    ),
+
+                    // Animated Search Bar
+                    _buildAnimatedSearchBar(),
+
+                    // Filter Chips
+                    _buildFilterChips(),
+
+                    // Task Count Info
+                    _buildTaskCountInfo(hasMore),
+
+                    // Task List
+                    Expanded(
+                      child: _filteredTasks.isEmpty
+                          ? _buildEmptyState(
+                              icon: Icons.search_off,
+                              title: _searchController.text.isNotEmpty
+                                  ? 'No tasks match your search'
+                                  : 'No tasks in this filter',
+                              subtitle: _searchController.text.isNotEmpty
+                                  ? 'Try a different search term'
+                                  : 'Apply a different filter to see tasks',
+                            )
+                          : _buildAnimatedTaskList(hasMore),
+                    ),
+                  ],
                 ),
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is TaskLoading) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 1000),
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    builder: (context, value, child) {
-                      return Transform.scale(
-                        scale: 0.8 + (value * 0.2),
-                        child: Opacity(
-                          opacity: value,
-                          child: const CircularProgressIndicator(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 800),
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: const Text('Loading tasks...'),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
+              );
+            }
 
-          if (state is TasksEmpty) {
-            return _buildEmptyState(
-              icon: Icons.task_alt,
-              title: 'No tasks found',
-              subtitle: 'Tasks assigned to you will appear here',
-            );
-          }
-
-          if (state is TasksLoaded || state is TaskRefreshing) {
-            final tasks = state is TasksLoaded
-                ? state.tasks
-                : (state as TaskRefreshing).currentTasks;
-            final hasMore = state is TasksLoaded
-                ? state.hasMore
-                : (state as TaskRefreshing).hasMore;
-
-            _filteredTasks = _getFilteredTasks(tasks);
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                context
-                    .read<TaskBloc>()
-                    .add(const LoadMyTasksEvent(isRefresh: true));
-                await Future.delayed(const Duration(milliseconds: 500));
-              },
-              child: Column(
-                children: [
-                  // Sync Status Indicator with Animation
-                  SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -1),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _headerController,
-                      curve: Curves.easeOut,
-                    )),
-                    child: const SyncStatusIndicator(),
-                  ),
-
-                  // Animated Search Bar
-                  _buildAnimatedSearchBar(),
-
-                  // Filter Chips
-                  _buildFilterChips(),
-
-                  // Task Count Info
-                  _buildTaskCountInfo(hasMore),
-
-                  // Task List
-                  Expanded(
-                    child: _filteredTasks.isEmpty
-                        ? _buildEmptyState(
-                            icon: Icons.search_off,
-                            title: _searchController.text.isNotEmpty
-                                ? 'No tasks match your search'
-                                : 'No tasks in this filter',
-                            subtitle: _searchController.text.isNotEmpty
-                                ? 'Try a different search term'
-                                : 'Apply a different filter to see tasks',
-                          )
-                        : _buildAnimatedTaskList(hasMore),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
-      floatingActionButton: ScaleTransition(
-        scale: CurvedAnimation(
-          parent: _fabController,
-          curve: Curves.easeInOut,
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            _navigateToCreateTask(context);
+            return const SizedBox.shrink();
           },
-          icon: const Icon(Icons.add),
-          label: const Text('New Task'),
+        ),
+        floatingActionButton: ScaleTransition(
+          scale: CurvedAnimation(
+            parent: _fabController,
+            curve: Curves.easeInOut,
+          ),
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              _navigateToCreateTask(context);
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('New Task'),
+          ),
         ),
       ),
     );
@@ -437,11 +485,7 @@ class _TaskListViewState extends State<TaskListView>
       case 'completed':
         return allTasks.where((t) => t.status.value == 'completed').length;
       case 'expired':
-        return allTasks
-            .where((t) =>
-                t.dueDateTime.isBefore(DateTime.now()) &&
-                (t.status.value == 'pending' || t.status.value == 'checked_in'))
-            .length;
+        return allTasks.where((t) => t.status.value == 'expired').length;
       default:
         return 0;
     }

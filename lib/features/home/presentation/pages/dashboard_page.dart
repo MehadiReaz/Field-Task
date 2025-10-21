@@ -386,7 +386,7 @@ class _DashboardPageState extends State<DashboardPage>
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentTasks.length > 5 ? recentTasks.length : 3,
+                  itemCount: recentTasks.length < 3 ? recentTasks.length : 3,
                   itemBuilder: (context, index) {
                     final task = recentTasks[index];
                     return _AnimatedTaskListItem(
@@ -612,6 +612,8 @@ class _AnimatedTaskListItem extends StatelessWidget {
         return Colors.green;
       case TaskStatus.cancelled:
         return Colors.red;
+      case TaskStatus.expired:
+        return Colors.red;
     }
   }
 
@@ -626,6 +628,8 @@ class _AnimatedTaskListItem extends StatelessWidget {
       case TaskStatus.completed:
         return Icons.check_circle;
       case TaskStatus.cancelled:
+        return Icons.cancel;
+      case TaskStatus.expired:
         return Icons.cancel;
     }
   }

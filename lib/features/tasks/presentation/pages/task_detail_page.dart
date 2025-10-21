@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,6 +15,7 @@ import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
+import '../widgets/slider_button.dart';
 import 'task_form_page.dart';
 import '../../../sync/presentation/widgets/sync_status_badge.dart';
 
@@ -477,6 +481,11 @@ class TaskDetailView extends StatelessWidget {
         textColor = Colors.red[900]!;
         label = 'Expired';
         break;
+      case TaskStatus.expired:
+        backgroundColor = Colors.red[100]!;
+        textColor = Colors.red[900]!;
+        label = 'Expired';
+        break;
     }
 
     return Chip(
@@ -524,7 +533,7 @@ class TaskDetailView extends StatelessWidget {
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 0),
       child: Row(
         children: [
           Icon(icon, size: 20, color: Colors.grey[600]),
@@ -593,57 +602,83 @@ class TaskDetailView extends StatelessWidget {
 
   Widget _buildActionButtons(BuildContext context, Task task) {
     if (task.status == TaskStatus.completed ||
-        task.status == TaskStatus.cancelled) {
+        task.status == TaskStatus.cancelled ||
+        task.status == TaskStatus.expired) {
       return const SizedBox.shrink();
     }
 
-    // If checked in, show slider to complete task, hide check-in button
+    // If checked in, show slider to complete task
     if (task.status == TaskStatus.checkedIn) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Slider to complete task
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text('Slide to complete task',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  _CompleteTaskSlider(
-                      onComplete: () => _showCompleteDialog(context, task)),
-                ],
-              ),
+      return Center(
+        child: SliderButtonWidget(
+          action: () async => await _showCompleteDialog(context, task),
+          width: MediaQuery.of(context).size.width - 64,
+          height: 65,
+          radius: 50,
+          buttonSize: 55,
+          backgroundColor: Colors.green.shade100,
+          baseColor: Colors.green.shade900,
+          highlightedColor: Colors.white,
+          buttonColor: Colors.green,
+          label: const Text(
+            'Slide to Complete Task',
+            style: TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(height: 12),
-          // Checkout Button
-          ElevatedButton.icon(
-            onPressed: () => _showCheckoutDialog(context, task),
-            icon: const Icon(Icons.logout),
-            label: const Text('Check Out'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(16),
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
+          icon: const Icon(
+            Icons.check_circle,
+            color: Colors.white,
+            size: 30,
           ),
-        ],
+          shimmer: true,
+          dismissible: true,
+          vibrationFlag: true,
+          dismissThresholds: 0.75,
+        ),
       );
     }
 
-    // If pending, show check-in button
+    // If pending, show check-in slider
     if (task.status == TaskStatus.pending) {
-      return ElevatedButton.icon(
-        onPressed: () => _showCheckInDialog(context, task),
-        icon: const Icon(Icons.location_on),
-        label: const Text('Check In'),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.all(16),
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
+      return Center(
+        child: SliderButtonWidget(
+          // Start fetching location as soon as the user touches the slider
+          onDragStart: () => _startPrefetchForTask(task.id),
+          action: () async {
+            final prefetched = _getPrefetchedPositionForTask(task.id);
+            return await _showCheckInDialog(
+              context,
+              task,
+              prefetchedPosition: prefetched,
+            );
+          },
+          width: MediaQuery.of(context).size.width - 64,
+          height: 65,
+          radius: 50,
+          buttonSize: 55,
+          dismissThresholds: 0.8,
+          backgroundColor: Colors.blue.shade100,
+          baseColor: Colors.blue.shade900,
+          highlightedColor: Colors.white,
+          buttonColor: Colors.blue,
+          label: const Text(
+            'Slide to Check In',
+            style: TextStyle(
+              color: Colors.blue,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+          icon: const Icon(
+            Icons.location_on,
+            color: Colors.white,
+            size: 30,
+          ),
+          shimmer: true,
+          dismissible: true,
         ),
       );
     }
@@ -652,71 +687,63 @@ class TaskDetailView extends StatelessWidget {
   }
 }
 
-// Slider widget for completing task
+Future<bool> _showCheckInDialog(BuildContext context, Task task, {Position? prefetchedPosition}) async {
+  Position? position = prefetchedPosition;
+  BuildContext? progressContext;
 
-// Slider widget for completing task
-class _CompleteTaskSlider extends StatefulWidget {
-  final VoidCallback onComplete;
-  const _CompleteTaskSlider({required this.onComplete});
-
-  @override
-  State<_CompleteTaskSlider> createState() => _CompleteTaskSliderState();
-}
-
-class _CompleteTaskSliderState extends State<_CompleteTaskSlider> {
-  double _sliderValue = 0;
-  bool _completed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Slider(
-          value: _sliderValue,
-          min: 0,
-          max: 100,
-          divisions: 100,
-          label: _completed ? 'Completed!' : '${_sliderValue.toInt()}%',
-          onChanged: _completed
-              ? null
-              : (value) {
-                  setState(() {
-                    _sliderValue = value;
-                  });
-                  if (value == 100 && !_completed) {
-                    setState(() {
-                      _completed = true;
-                    });
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      widget.onComplete();
-                    });
-                  }
-                },
-        ),
-        if (_completed)
-          const Text('Task completed!',
-              style:
-                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-}
-
-void _showCheckInDialog(BuildContext context, Task task) async {
-  // Get actual GPS location
   try {
-    final position = await _getCurrentLocation();
     if (position == null) {
-      if (context.mounted) {
-        _showLocationError(context, 'Unable to get current location');
+      // Show a non-dismissible progress indicator while we fetch the location
+      // so the slider doesn't appear to hang without feedback.
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          progressContext = ctx;
+          return const AlertDialog(
+            content: SizedBox(
+              height: 88,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Checking current location...'),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
+      log("Checking location for task check-in...");
+      position = await _getCurrentLocation();
+
+      // Close the progress dialog if it is still visible
+      if (progressContext != null) {
+        try {
+          Navigator.of(progressContext!).pop();
+        } catch (_) {}
+        progressContext = null;
       }
-      return;
+
+      if (position == null) {
+        if (context.mounted) {
+          _showLocationError(context, 'Unable to get current location');
+        }
+        return false;
+      }
     }
+
+    // At this point we should have a valid position
+  final pos = position;
 
     // Calculate distance from task location
     final distance = _calculateDistance(
-      position.latitude,
-      position.longitude,
+      pos.latitude,
+      pos.longitude,
       task.latitude,
       task.longitude,
     );
@@ -729,104 +756,158 @@ void _showCheckInDialog(BuildContext context, Task task) async {
           'You are ${distance.toStringAsFixed(0)}m away from the task location. You must be within 100m to check in.',
         );
       }
-      return;
+      return false;
     }
 
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Check In'),
-          content: Text(
-            'You are ${distance.toStringAsFixed(0)}m from the task location.\n\nAre you sure you want to check in to this task?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                context.read<TaskBloc>().add(CheckInTaskEvent(
-                      taskId: task.id,
-                      latitude: position.latitude,
-                      longitude: position.longitude,
-                      photoUrl: null,
-                      notes: 'Checked in via app',
-                    ));
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Check In'),
-            ),
+    if (!context.mounted) return false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.location_on, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Check In'),
           ],
         ),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      _showLocationError(context, 'Error getting location: $e');
-    }
-  }
-}
-
-void _showCheckoutDialog(BuildContext context, Task task) {
-  showDialog(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Check Out'),
-      content: const Text(
-        'Are you sure you want to check out?\n\nThis will remove the task from your active list.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            context.read<TaskBloc>().add(CheckoutTaskEvent(task.id));
-            Navigator.pop(dialogContext);
-            // Go back to task list after checkout
-            Navigator.pop(context);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
+        content: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.6,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'You are ${distance.toStringAsFixed(0)}m from the task location.',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.blue, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Within check-in range',
+                          style: TextStyle(color: Colors.blue),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Confirm to check in to this task?'),
+              ],
+            ),
           ),
-          child: const Text('Check Out'),
         ),
-      ],
-    ),
-  );
-}
-
-void _showCompleteDialog(BuildContext context, Task task) {
-  final notesController = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Complete Task'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Add completion notes (optional):'),
-          const SizedBox(height: 12),
-          TextField(
-            controller: notesController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Enter notes...',
-              border: OutlineInputBorder(),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              context.read<TaskBloc>().add(CheckInTaskEvent(
+                    taskId: task.id,
+                    latitude: pos.latitude,
+                    longitude: pos.longitude,
+                    photoUrl: null,
+                    notes: 'Checked in via app',
+                  ));
+              Navigator.of(dialogContext).pop(true);
+            },
+            icon: const Icon(Icons.check),
+            label: const Text('Check In'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
             ),
           ),
         ],
       ),
+    );
+
+    return confirmed == true;
+  } catch (err) {
+    if (progressContext != null) {
+      try {
+        Navigator.of(progressContext!).pop();
+      } catch (_) {}
+      progressContext = null;
+    }
+
+    if (context.mounted) {
+      _showLocationError(context, 'Error getting location: $err');
+    }
+    return false;
+  }
+}
+
+Future<bool> _showCompleteDialog(BuildContext context, Task task) async {
+  final notesController = TextEditingController();
+
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green),
+          SizedBox(width: 8),
+          Text('Complete Task'),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(dialogContext).viewInsets.bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.6,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Add completion notes (optional):',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 120,
+                  child: TextField(
+                    controller: notesController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Enter notes...',
+                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
+          onPressed: () => Navigator.of(dialogContext).pop(false),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        ElevatedButton.icon(
           onPressed: () {
             context.read<TaskBloc>().add(CompleteTaskEvent(
                   taskId: task.id,
@@ -835,13 +916,20 @@ void _showCompleteDialog(BuildContext context, Task task) {
                       ? null
                       : notesController.text,
                 ));
-            Navigator.pop(dialogContext);
+            Navigator.of(dialogContext).pop(true);
           },
-          child: const Text('Complete'),
+          icon: const Icon(Icons.done),
+          label: const Text('Complete'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+          ),
         ),
       ],
     ),
   );
+
+  return result == true;
 }
 
 // Get current GPS location
@@ -872,7 +960,13 @@ void _showLocationError(BuildContext context, String message) {
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Location Error'),
+      title: const Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.red),
+          SizedBox(width: 8),
+          Text('Location Error'),
+        ],
+      ),
       content: Text(message),
       actions: [
         TextButton(
@@ -899,4 +993,43 @@ Future<void> _navigateToEditTask(BuildContext context, Task task) async {
   if (result == true && context.mounted) {
     context.read<TaskBloc>().add(LoadTaskByIdEvent(task.id));
   }
+}
+
+// Lightweight prefetch cache so we can start obtaining the device location
+// when the user touches the slider. This prevents the slider feeling like
+// it's "stuck" while we synchronously fetch location after the swipe.
+class _PrefetchEntry {
+  Position? position;
+  DateTime? timestamp;
+  Future<void>? future;
+}
+
+final Map<String, _PrefetchEntry> _prefetchCache = {};
+const Duration _prefetchTtl = Duration(seconds: 30);
+
+Future<void> _startPrefetchForTask(String taskId) {
+  final entry = _prefetchCache.putIfAbsent(taskId, () => _PrefetchEntry());
+  // If a prefetch is already running, reuse it.
+  if (entry.future != null) return entry.future!;
+
+  entry.future = () async {
+    try {
+      final pos = await _getCurrentLocation();
+      entry.position = pos;
+      entry.timestamp = DateTime.now();
+    } catch (_) {
+      entry.position = null;
+      entry.timestamp = null;
+    }
+  }();
+
+  return entry.future!;
+}
+
+Position? _getPrefetchedPositionForTask(String taskId) {
+  final entry = _prefetchCache[taskId];
+  if (entry == null) return null;
+  if (entry.position == null || entry.timestamp == null) return null;
+  if (DateTime.now().difference(entry.timestamp!) > _prefetchTtl) return null;
+  return entry.position;
 }

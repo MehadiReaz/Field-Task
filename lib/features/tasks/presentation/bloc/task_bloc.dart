@@ -63,6 +63,49 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     on<RefreshTasksEvent>(_onRefreshTasks);
     on<SearchTasksEvent>(_onSearchTasks);
     on<ClearSearchEvent>(_onClearSearch);
+
+    on<LoadHistoryTasksEvent>((event, emit) async {
+      emit(const TaskLoading());
+      try {
+        // Load both in parallel using Future.wait
+        final results = await Future.wait([
+          getTasksByStatus(GetTasksByStatusParams(
+            status: 'completed',
+            useLocal: false,
+          )),
+          getTasksByStatus(GetTasksByStatusParams(
+            status: 'expired',
+            useLocal: false,
+          )),
+        ]);
+
+        final List<Task> allHistoryTasks = [];
+
+        // Process completed tasks
+        results[0].fold(
+          (failure) => throw Exception(failure.message),
+          (tasks) => allHistoryTasks.addAll(tasks),
+        );
+
+        // Process expired tasks
+        results[1].fold(
+          (failure) => throw Exception(failure.message),
+          (tasks) => allHistoryTasks.addAll(tasks),
+        );
+
+        if (allHistoryTasks.isEmpty) {
+          emit(const TasksEmpty());
+        } else {
+          emit(TasksLoaded(
+            allHistoryTasks,
+            lastDocument: null,
+            hasMore: false,
+          ));
+        }
+      } catch (e) {
+        emit(TaskError(e.toString()));
+      }
+    });
   }
 
   // Helper method to handle common task list result pattern

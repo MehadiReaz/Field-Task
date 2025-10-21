@@ -1,3 +1,4 @@
+// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 // **************************************************************************
@@ -20,9 +21,11 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 import 'core/network/network_info.dart' as _i75;
 import 'core/network/network_info_impl.dart' as _i973;
 import 'core/services/connectivity_service.dart' as _i524;
+import 'core/services/dashboard_service.dart' as _i662;
 import 'core/services/expired_tasks_checker_service.dart' as _i553;
 import 'core/services/local_notification_service.dart' as _i102;
 import 'core/services/notification_service.dart' as _i1011;
+import 'core/services/task_expiry_service.dart' as _i930;
 import 'database/database.dart' as _i565;
 import 'features/auth/data/datasources/auth_local_datasource.dart' as _i1043;
 import 'features/auth/data/datasources/auth_remote_datasource.dart' as _i588;
@@ -115,6 +118,10 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i942.LocationDataSourceImpl());
     gh.lazySingleton<_i55.LocationRepository>(
         () => _i1061.LocationRepositoryImpl(gh<_i942.LocationDataSource>()));
+    gh.lazySingleton<_i662.DashboardService>(() => _i662.DashboardService(
+          firestore: gh<_i974.FirebaseFirestore>(),
+          firebaseAuth: gh<_i59.FirebaseAuth>(),
+        ));
     gh.factory<_i875.TaskStatsRemoteDataSource>(
         () => _i875.TaskStatsRemoteDataSourceImpl(
               firestore: gh<_i974.FirebaseFirestore>(),
@@ -122,11 +129,6 @@ extension GetItInjectableX on _i174.GetIt {
             ));
     gh.factory<_i616.TaskStatsLocalDataSource>(() =>
         _i616.TaskStatsLocalDataSourceImpl(database: gh<_i565.AppDatabase>()));
-    gh.lazySingleton<_i403.TaskRemoteDataSource>(
-        () => _i403.TaskRemoteDataSourceImpl(
-              gh<_i974.FirebaseFirestore>(),
-              gh<_i59.FirebaseAuth>(),
-            ));
     gh.lazySingleton<_i75.NetworkInfo>(
         () => _i973.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i1043.AuthLocalDataSource>(
@@ -144,6 +146,18 @@ extension GetItInjectableX on _i174.GetIt {
               firebaseAuth: gh<_i59.FirebaseAuth>(),
               firestore: gh<_i974.FirebaseFirestore>(),
               googleSignIn: gh<_i116.GoogleSignIn>(),
+            ));
+    gh.lazySingleton<_i930.TaskExpiryService>(() => _i930.TaskExpiryService(
+          firestore: gh<_i974.FirebaseFirestore>(),
+          firebaseAuth: gh<_i59.FirebaseAuth>(),
+          dashboardService: gh<_i662.DashboardService>(),
+        ));
+    gh.lazySingleton<_i403.TaskRemoteDataSource>(
+        () => _i403.TaskRemoteDataSourceImpl(
+              gh<_i974.FirebaseFirestore>(),
+              gh<_i59.FirebaseAuth>(),
+              gh<_i662.DashboardService>(),
+              gh<_i930.TaskExpiryService>(),
             ));
     gh.lazySingleton<_i428.SyncDataSource>(
         () => _i428.SyncDataSourceImpl(gh<_i565.AppDatabase>()));
@@ -186,13 +200,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i768.GetTaskStats(gh<_i366.ITaskStatsRepository>()));
     gh.factory<_i768.CalculateAndSaveTaskStats>(() =>
         _i768.CalculateAndSaveTaskStats(gh<_i366.ITaskStatsRepository>()));
-    gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
-          signInWithGoogle: gh<_i648.SignInWithGoogle>(),
-          signInWithEmail: gh<_i509.SignInWithEmail>(),
-          signOut: gh<_i872.SignOut>(),
-          getCurrentUser: gh<_i191.GetCurrentUser>(),
-          checkAuthStatus: gh<_i818.CheckAuthStatus>(),
-        ));
     gh.factory<_i416.SyncBloc>(
         () => _i416.SyncBloc(syncService: gh<_i443.SyncService>()));
     gh.lazySingleton<_i356.TaskRepository>(() => _i969.TaskRepositoryImpl(
@@ -208,6 +215,14 @@ extension GetItInjectableX on _i174.GetIt {
               taskRepository: gh<_i356.TaskRepository>(),
               notificationService: gh<_i102.LocalNotificationService>(),
             ));
+    gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
+          signInWithGoogle: gh<_i648.SignInWithGoogle>(),
+          signInWithEmail: gh<_i509.SignInWithEmail>(),
+          signOut: gh<_i872.SignOut>(),
+          getCurrentUser: gh<_i191.GetCurrentUser>(),
+          checkAuthStatus: gh<_i818.CheckAuthStatus>(),
+          dashboardService: gh<_i662.DashboardService>(),
+        ));
     gh.factory<_i0.TaskStatsBloc>(() => _i0.TaskStatsBloc(
           getTaskStats: gh<_i768.GetTaskStats>(),
           calculateAndSaveTaskStats: gh<_i768.CalculateAndSaveTaskStats>(),
