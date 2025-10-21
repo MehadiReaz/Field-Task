@@ -40,10 +40,10 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
 
   static ThemeState _getInitialState(ThemeRepository repo) {
     final stored = repo.getThemeMode();
-    ThemeMode initialMode = ThemeMode.system;
-    if (stored == 'light')
+    ThemeMode initialMode = ThemeMode.light;
+    if (stored == 'light') {
       initialMode = ThemeMode.light;
-    else if (stored == 'dark') initialMode = ThemeMode.dark;
+    } else if (stored == 'dark') initialMode = ThemeMode.dark;
     return ThemeState(initialMode);
   }
 
