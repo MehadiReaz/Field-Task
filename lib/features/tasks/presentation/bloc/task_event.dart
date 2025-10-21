@@ -23,6 +23,14 @@ class LoadTasksByStatusEvent extends TaskEvent {
   List<Object?> get props => [status];
 }
 
+/// Load tasks for history page (completed and expired)
+class LoadHistoryTasksEvent extends TaskEvent {
+  const LoadHistoryTasksEvent();
+
+  @override
+  List<Object?> get props => [];
+}
+
 /// Load expired tasks (tasks past due date and not completed)
 class LoadExpiredTasksEvent extends TaskEvent {
   final bool useLocal;
