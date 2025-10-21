@@ -6,7 +6,7 @@ import '../../domain/entities/task.dart';
 import '../bloc/task_bloc.dart';
 import '../bloc/task_event.dart';
 import '../bloc/task_state.dart';
-import '_animated_history_item.dart';
+import 'animated_history_item.dart';
 import 'task_detail_page.dart';
 
 class HistoryPage extends StatefulWidget {

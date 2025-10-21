@@ -10,11 +10,11 @@ class AnimatedHistoryItem extends StatefulWidget {
   final VoidCallback onTap;
 
   const AnimatedHistoryItem({
-    Key? key,
+    super.key,
     required this.task,
     required this.index,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   State<AnimatedHistoryItem> createState() => _AnimatedHistoryItemState();
@@ -290,18 +290,5 @@ class _HistoryCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatDuration(DateTime start, DateTime end) {
-    final duration = end.difference(start);
-    if (duration.inDays > 0) {
-      return '${duration.inDays}d ${duration.inHours % 24}h';
-    } else if (duration.inHours > 0) {
-      return '${duration.inHours}h ${duration.inMinutes % 60}m';
-    } else if (duration.inMinutes > 0) {
-      return '${duration.inMinutes}m';
-    } else {
-      return '${duration.inSeconds}s';
-    }
   }
 }

@@ -6,7 +6,6 @@ import '../core/services/notification_service.dart';
 import '../core/widgets/connectivity_banner.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/location/presentation/bloc/location_bloc.dart';
-import '../features/location/presentation/widgets/location_permission_dialog.dart';
 import '../features/sync/presentation/bloc/sync_bloc.dart';
 import '../features/sync/presentation/bloc/sync_event.dart';
 import '../injection_container.dart';
@@ -19,14 +18,16 @@ class TaskTrackrApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notificationService = getIt<NotificationService>();
+    final authBloc = getIt<AuthBloc>()..add(CheckAuthStatusEvent());
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => getIt<AuthBloc>()..add(CheckAuthStatusEvent()),
+        BlocProvider.value(
+          value: authBloc,
         ),
         BlocProvider(
-          create: (_) => getIt<LocationBloc>()..add(const CheckPermissionEvent()),
+          create: (_) =>
+              getIt<LocationBloc>()..add(const CheckPermissionEvent()),
         ),
         BlocProvider(
           create: (_) => getIt<SyncBloc>()..add(const StartAutoSyncEvent()),
@@ -35,28 +36,21 @@ class TaskTrackrApp extends StatelessWidget {
           create: (_) => getIt<ThemeBloc>(),
         ),
       ],
-      child: BlocListener<LocationBloc, LocationState>(
-        listener: (context, state) {
-          if (state is LocationPermissionDenied) {
-            LocationPermissionDialog.show(context);
-          }
-        },
-        child: BlocBuilder<ThemeBloc, ThemeState>(
-          builder: (context, themeState) => MaterialApp.router(
-            title: 'Task Tracker',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeState.mode,
-            routerConfig: AppRouter.router,
-            scaffoldMessengerKey: notificationService.scaffoldKey,
-            builder: (context, child) {
-              return ConnectivityBanner(
-                connectivityService: getIt<ConnectivityService>(),
-                child: child ?? const SizedBox.shrink(),
-              );
-            },
-          ),
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        builder: (context, themeState) => MaterialApp.router(
+          title: 'Field Task',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeState.mode,
+          routerConfig: AppRouter.createRouter(authBloc),
+          scaffoldMessengerKey: notificationService.scaffoldKey,
+          builder: (context, child) {
+            return ConnectivityBanner(
+              connectivityService: getIt<ConnectivityService>(),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
         ),
       ),
     );

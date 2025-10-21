@@ -112,13 +112,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignOutEvent event,
     Emitter<AuthState> emit,
   ) async {
+    AppLogger.info('SignOut event received');
     emit(AuthLoadingState());
 
     final result = await signOut(const NoParams());
 
     result.fold(
-      (failure) => emit(AuthErrorState(message: failure.message)),
-      (_) => emit(AuthUnauthenticatedState()),
+      (failure) {
+        AppLogger.error('SignOut failed: ${failure.message}');
+        emit(AuthErrorState(message: failure.message));
+      },
+      (_) {
+        AppLogger.info(
+            'SignOut successful - emitting AuthUnauthenticatedState');
+        emit(AuthUnauthenticatedState());
+      },
     );
   }
 

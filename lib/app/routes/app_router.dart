@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
@@ -17,101 +18,118 @@ import '../../features/settings/presentation/pages/settings_page.dart';
 import 'route_names.dart';
 
 class AppRouter {
-  static final GoRouter router = GoRouter(
-    initialLocation: RouteNames.splash,
-    refreshListenable: GoRouterRefreshStream(
-        // Listen to auth state changes
+  // GlobalKey to access navigator from anywhere
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
+  static GoRouter createRouter(AuthBloc authBloc) {
+    return GoRouter(
+      navigatorKey: navigatorKey,
+      initialLocation: RouteNames.splash,
+      refreshListenable: GoRouterRefreshStream(authBloc),
+      redirect: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        final isAuthenticated = authState is AuthAuthenticatedState;
+
+        final isOnLoginPage = state.matchedLocation == RouteNames.login;
+        final isOnSplashPage = state.matchedLocation == RouteNames.splash;
+
+        // If not authenticated and not on login/splash, redirect to login
+        if (!isAuthenticated && !isOnLoginPage && !isOnSplashPage) {
+          return RouteNames.login;
+        }
+
+        // If authenticated and on login/splash, redirect to home
+        if (isAuthenticated && (isOnLoginPage || isOnSplashPage)) {
+          return RouteNames.home;
+        }
+
+        return null; // No redirect needed
+      },
+      routes: [
+        GoRoute(
+          path: RouteNames.splash,
+          builder: (context, state) => const SplashPage(),
         ),
-    redirect: (context, state) {
-      final authState = context.read<AuthBloc>().state;
-      final isAuthenticated = authState is AuthAuthenticatedState;
-
-      final isOnLoginPage = state.matchedLocation == RouteNames.login;
-      final isOnSplashPage = state.matchedLocation == RouteNames.splash;
-
-      // If not authenticated and not on login/splash, redirect to login
-      if (!isAuthenticated && !isOnLoginPage && !isOnSplashPage) {
-        return RouteNames.login;
-      }
-
-      // If authenticated and on login/splash, redirect to home
-      if (isAuthenticated && (isOnLoginPage || isOnSplashPage)) {
-        return RouteNames.home;
-      }
-
-      return null; // No redirect needed
-    },
-    routes: [
-      GoRoute(
-        path: RouteNames.splash,
-        builder: (context, state) => const SplashPage(),
+        GoRoute(
+          path: RouteNames.login,
+          builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: RouteNames.home,
+          builder: (context, state) => const HomePage(),
+        ),
+        GoRoute(
+          path: RouteNames.taskList,
+          builder: (context, state) => const TaskListPage(),
+        ),
+        GoRoute(
+          path: RouteNames.history,
+          builder: (context, state) => const HistoryPage(),
+        ),
+        GoRoute(
+          path: RouteNames.taskDetail,
+          builder: (context, state) {
+            final taskId = state.pathParameters['id']!;
+            return TaskDetailPage(taskId: taskId);
+          },
+        ),
+        GoRoute(
+          path: RouteNames.createTask,
+          builder: (context, state) => const TaskFormPage(),
+        ),
+        GoRoute(
+          path: RouteNames.editTask,
+          builder: (context, state) {
+            final taskId = state.pathParameters['id']!;
+            return TaskFormPage(taskId: taskId);
+          },
+        ),
+        GoRoute(
+          path: RouteNames.mapSelection,
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            return MapSelectionPage(
+              initialLat: extra?['lat'] as double?,
+              initialLng: extra?['lng'] as double?,
+            );
+          },
+        ),
+        GoRoute(
+          path: RouteNames.fullMap,
+          builder: (context, state) => const FullMapPage(),
+        ),
+        GoRoute(
+          path: RouteNames.profile,
+          builder: (context, state) => const ProfilePage(),
+        ),
+        GoRoute(
+          path: RouteNames.settings,
+          builder: (context, state) => const SettingsPage(),
+        ),
+      ],
+      errorBuilder: (context, state) => Scaffold(
+        body: Center(
+          child: Text('Page not found: ${state.uri}'),
+        ),
       ),
-      GoRoute(
-        path: RouteNames.login,
-        builder: (context, state) => const LoginPage(),
-      ),
-      GoRoute(
-        path: RouteNames.home,
-        builder: (context, state) => const HomePage(),
-      ),
-      GoRoute(
-        path: RouteNames.taskList,
-        builder: (context, state) => const TaskListPage(),
-      ),
-      GoRoute(
-        path: RouteNames.history,
-        builder: (context, state) => const HistoryPage(),
-      ),
-      GoRoute(
-        path: RouteNames.taskDetail,
-        builder: (context, state) {
-          final taskId = state.pathParameters['id']!;
-          return TaskDetailPage(taskId: taskId);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.createTask,
-        builder: (context, state) => const TaskFormPage(),
-      ),
-      GoRoute(
-        path: RouteNames.editTask,
-        builder: (context, state) {
-          final taskId = state.pathParameters['id']!;
-          return TaskFormPage(taskId: taskId);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.mapSelection,
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          return MapSelectionPage(
-            initialLat: extra?['lat'] as double?,
-            initialLng: extra?['lng'] as double?,
-          );
-        },
-      ),
-      GoRoute(
-        path: RouteNames.fullMap,
-        builder: (context, state) => const FullMapPage(),
-      ),
-      GoRoute(
-        path: RouteNames.profile,
-        builder: (context, state) => const ProfilePage(),
-      ),
-      GoRoute(
-        path: RouteNames.settings,
-        builder: (context, state) => const SettingsPage(),
-      ),
-    ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.uri}'),
-      ),
-    ),
-  );
+    );
+  }
 }
 
 // Helper class to refresh router on auth state changes
 class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream();
+  late final StreamSubscription<AuthState> _subscription;
+
+  GoRouterRefreshStream(AuthBloc authBloc) {
+    _subscription = authBloc.stream.listen((AuthState state) {
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
 }

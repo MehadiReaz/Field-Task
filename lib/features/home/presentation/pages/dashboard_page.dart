@@ -9,6 +9,7 @@ import '../../../tasks/presentation/pages/task_detail_page.dart';
 import '../../../tasks/presentation/pages/task_form_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../location/presentation/bloc/location_bloc.dart';
+import '../../../location/presentation/widgets/location_permission_dialog.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -63,31 +64,43 @@ class _DashboardPageState extends State<DashboardPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          context.read<TaskBloc>().add(const LoadMyTasksEvent());
-          await Future.delayed(const Duration(milliseconds: 300));
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildWelcomeSection(),
-                  _buildStatsSection(),
-                  _buildQuickActions(),
-                  _buildRecentTasks(),
-                  const SizedBox(height: 24),
-                ],
+    return BlocListener<LocationBloc, LocationState>(
+      listener: (context, state) {
+        if (state is LocationPermissionDenied) {
+          // Show dialog after first frame to ensure context is ready
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              LocationPermissionDialog.show(context);
+            }
+          });
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          elevation: 0,
+        ),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            context.read<TaskBloc>().add(const LoadMyTasksEvent());
+            await Future.delayed(const Duration(milliseconds: 300));
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildWelcomeSection(),
+                    _buildStatsSection(),
+                    _buildQuickActions(),
+                    _buildRecentTasks(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
