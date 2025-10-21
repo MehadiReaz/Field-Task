@@ -377,8 +377,8 @@ Future<Either<Failure, Task>> getTask(String id) async {
 ## 🛠️ Tech Stack
 
 ### **Frontend**
-- **Flutter 3.6+**: Cross-platform UI framework
-- **Dart 3.6+**: Programming language
+- **Flutter 3.35.6**: Cross-platform UI framework
+- **Dart 3.9.2**: Programming language
 
 ### **State Management**
 - **flutter_bloc 8.1.3**: BLoC pattern implementation

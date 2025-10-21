@@ -264,63 +264,63 @@ class _TaskFormViewState extends State<TaskFormView> {
                           const SizedBox(height: 16),
 
                           // Use Current Location Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: isLoading || _isFetchingLocation
-                                  ? null
-                                  : _useCurrentLocation,
-                              icon: _isFetchingLocation
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.my_location),
-                              label: Text(
-                                _isFetchingLocation
-                                    ? 'Getting location...'
-                                    : 'Use Current Location',
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.blue,
-                                side: const BorderSide(color: Colors.blue),
-                              ),
-                            ),
-                          ),
+                          // SizedBox(
+                          //   width: double.infinity,
+                          //   child: OutlinedButton.icon(
+                          //     onPressed: isLoading || _isFetchingLocation
+                          //         ? null
+                          //         : _useCurrentLocation,
+                          //     icon: _isFetchingLocation
+                          //         ? const SizedBox(
+                          //             width: 16,
+                          //             height: 16,
+                          //             child: CircularProgressIndicator(
+                          //               strokeWidth: 2,
+                          //             ),
+                          //           )
+                          //         : const Icon(Icons.my_location),
+                          //     label: Text(
+                          //       _isFetchingLocation
+                          //           ? 'Getting location...'
+                          //           : 'Use Current Location',
+                          //     ),
+                          //     style: OutlinedButton.styleFrom(
+                          //       foregroundColor: Colors.blue,
+                          //       side: const BorderSide(color: Colors.blue),
+                          //     ),
+                          //   ),
+                          // ),
 
                           // const SizedBox(height: 12),
 
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Divider(
-                                  color: Colors.grey[400],
-                                  thickness: 1,
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text(
-                                  'OR',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: Divider(
-                                  color: Colors.grey[400],
-                                  thickness: 1,
-                                ),
-                              ),
-                            ],
-                          ),
+                          // Row(
+                          //   children: [
+                          //     Expanded(
+                          //       child: Divider(
+                          //         color: Colors.grey[400],
+                          //         thickness: 1,
+                          //       ),
+                          //     ),
+                          //     const Padding(
+                          //       padding: EdgeInsets.all(8.0),
+                          //       child: Text(
+                          //         'OR',
+                          //         style: TextStyle(
+                          //           fontSize: 12,
+                          //           color: Colors.grey,
+                          //           fontWeight: FontWeight.w500,
+                          //         ),
+                          //         textAlign: TextAlign.center,
+                          //       ),
+                          //     ),
+                          //     Expanded(
+                          //       child: Divider(
+                          //         color: Colors.grey[400],
+                          //         thickness: 1,
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
 
                           // const SizedBox(height: 12),
 
@@ -429,7 +429,7 @@ class _TaskFormViewState extends State<TaskFormView> {
                             ),
                           ],
 
-                          // const SizedBox(height: 12),
+                          const SizedBox(height: 12),
 
                           // const Divider(),
 
@@ -440,10 +440,10 @@ class _TaskFormViewState extends State<TaskFormView> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              // color: Colors.blue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: Colors.blue.withOpacity(0.3),
+                                color: Colors.blue.withOpacity(0.8),
                               ),
                             ),
                             child: TextButton.icon(
@@ -457,9 +457,9 @@ class _TaskFormViewState extends State<TaskFormView> {
                               label: const Text(
                                 'Select on Map',
                               ),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.grey[700],
-                              ),
+                              // style: TextButton.styleFrom(
+                              //   foregroundColor: Colors.grey[700],
+                              // ),
                             ),
                           ),
                         ],

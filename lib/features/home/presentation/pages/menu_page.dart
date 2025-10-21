@@ -240,7 +240,7 @@ class MenuPage extends StatelessWidget {
                                             : pendingCount > 0
                                                 ? '$pendingCount ${pendingCount == 1 ? 'item' : 'items'} waiting to sync'
                                                 : 'All data synced with server',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 13,
                                           color: AppColors.textSecondary,
                                         ),
@@ -249,7 +249,7 @@ class MenuPage extends StatelessWidget {
                                   ),
                                 ),
                                 if (pendingCount > 0 && !isSyncing)
-                                  Icon(
+                                  const Icon(
                                     Icons.arrow_forward_ios_rounded,
                                     color: AppColors.textSecondary,
                                     size: 18,
@@ -287,16 +287,16 @@ class MenuPage extends StatelessWidget {
                   subtitle: 'View and edit your profile',
                   onTap: () => context.push('/profile'),
                 ),
-                const SizedBox(height: 10),
-                _buildMenuItem(
-                  context,
-                  icon: Icons.notifications_outlined,
-                  title: 'Notifications',
-                  subtitle: 'Manage notification settings',
-                  onTap: () {
-                    // TODO: Navigate to notifications settings
-                  },
-                ),
+                // const SizedBox(height: 10),
+                // _buildMenuItem(
+                //   context,
+                //   icon: Icons.notifications_outlined,
+                //   title: 'Notifications',
+                //   subtitle: 'Manage notification settings',
+                //   onTap: () {
+                //     // TODO: Navigate to notifications settings
+                //   },
+                // ),
 
                 const SizedBox(height: 24),
                 const Padding(
@@ -312,15 +312,15 @@ class MenuPage extends StatelessWidget {
                   ),
                 ),
 
-                _buildMenuItem(
-                  context,
-                  icon: Icons.help_outline_rounded,
-                  title: 'Help & Support',
-                  subtitle: 'Get help and contact support',
-                  onTap: () {
-                    // TODO: Navigate to help
-                  },
-                ),
+                // _buildMenuItem(
+                //   context,
+                //   icon: Icons.help_outline_rounded,
+                //   title: 'Help & Support',
+                //   subtitle: 'Get help and contact support',
+                //   onTap: () {
+                //     // TODO: Navigate to help
+                //   },
+                // ),
                 const SizedBox(height: 10),
                 _buildMenuItem(
                   context,
@@ -423,7 +423,7 @@ class MenuPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
+                const Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: AppColors.textSecondary,
                   size: 16,
@@ -495,17 +495,17 @@ class MenuPage extends StatelessWidget {
       context: context,
       applicationName: 'TaskTrackr',
       applicationVersion: '1.0.0',
-      applicationIcon: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(
-          Icons.task_alt_rounded,
-          size: 36,
-          color: Colors.white,
+      applicationIcon: SizedBox(
+        width: 80,
+        height: 80,
+        // decoration: BoxDecoration(
+        //   gradient: AppColors.primaryGradient,
+        //   borderRadius: BorderRadius.circular(16),
+        // ),
+        child: Image.asset(
+          'assets/images/app_icon.png',
+          width: 40,
+          height: 40,
         ),
       ),
       children: const [

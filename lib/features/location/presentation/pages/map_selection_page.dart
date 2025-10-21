@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geocoding/geocoding.dart'; // 👈 for address search
+import 'package:geocoding/geocoding.dart';
 import '../../../../injection_container.dart';
 import '../bloc/location_bloc.dart';
 
@@ -36,6 +36,7 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
     // Initialize with provided coordinates or get current location
     if (widget.initialLat != null && widget.initialLng != null) {
       _selectedPosition = LatLng(widget.initialLat!, widget.initialLng!);
+      _isLoadingAddress = true; // Set loading state
       _locationBloc.add(GetAddressEvent(
         latitude: widget.initialLat!,
         longitude: widget.initialLng!,
@@ -56,6 +57,7 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
     setState(() {
       _selectedPosition = position;
       _isLoadingAddress = true;
+      _selectedAddress = null; // Clear previous address
     });
 
     _locationBloc.add(GetAddressEvent(
@@ -70,6 +72,17 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
 
   void _confirmSelection() {
     if (_selectedPosition != null) {
+      // If address is still loading, show a message
+      if (_isLoadingAddress) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please wait while we get the address...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
       final result = {
         'latitude': _selectedPosition!.latitude,
         'longitude': _selectedPosition!.longitude,
@@ -84,25 +97,89 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Search Location'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter a place or address',
-            border: OutlineInputBorder(),
+      builder: (context) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.search, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Search Location',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Enter city, address, or place',
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    Navigator.pop(context, value.trim());
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Examples: "Dhaka, Bangladesh" or "Times Square, New York"',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (controller.text.trim().isNotEmpty) {
+                        Navigator.pop(context, controller.text.trim());
+                      }
+                    },
+                    icon: const Icon(Icons.search),
+                    label: const Text('Search'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Search'),
-          ),
-        ],
       ),
     );
 
@@ -117,29 +194,116 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
       _isLoadingAddress = true;
     });
 
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text('Searching for "$query"...'),
+            ],
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+
     try {
       final locations = await locationFromAddress(query);
+
+      // Clear the loading snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+
       if (locations.isNotEmpty) {
         final location = locations.first;
         final newPosition = LatLng(location.latitude, location.longitude);
 
         setState(() {
           _selectedPosition = newPosition;
-          _selectedAddress = query;
-          _isLoadingAddress = false;
+          _isLoadingAddress = true; // Keep loading while getting address
         });
 
+        // Animate to the new position
         _mapController.move(newPosition, 15.0);
+
+        // Get the formatted address for this location
+        _locationBloc.add(GetAddressEvent(
+          latitude: location.latitude,
+          longitude: location.longitude,
+        ));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Location found!'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location not found.')),
-        );
+        setState(() => _isLoadingAddress = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('No results found for "$query"'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error searching location: $e')),
-      );
       setState(() => _isLoadingAddress = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                      'Error: ${e.toString().replaceAll('Exception: ', '')}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: () => _searchLocation(query),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -151,11 +315,11 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
         appBar: AppBar(
           title: const Text('Select Location'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              tooltip: 'Search Location',
-              onPressed: _openSearchDialog,
-            ),
+            // IconButton(
+            //   icon: const Icon(Icons.search),
+            //   tooltip: 'Search Location',
+            //   onPressed: _openSearchDialog,
+            // ),
             if (_selectedPosition != null)
               IconButton(
                 icon: const Icon(Icons.check),
@@ -172,8 +336,15 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                   state.location.latitude,
                   state.location.longitude,
                 );
+                _isLoadingAddress = true; // Start loading address
               });
               _mapController.move(_selectedPosition!, 15.0);
+
+              // Automatically load address for the current location
+              _locationBloc.add(GetAddressEvent(
+                latitude: state.location.latitude,
+                longitude: state.location.longitude,
+              ));
             } else if (state is AddressLoaded) {
               setState(() {
                 _selectedAddress = state.address;
@@ -186,6 +357,9 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                   backgroundColor: Colors.red,
                 ),
               );
+              setState(() {
+                _isLoadingAddress = false;
+              });
             }
           },
           builder: (context, state) {
@@ -225,7 +399,8 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                       ),
                   ],
                 ),
-                if (_selectedAddress != null || _isLoadingAddress)
+                // Address display card
+                if (_selectedPosition != null)
                   Positioned(
                     top: 16,
                     left: 16,
@@ -247,18 +422,91 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                                   Text('Loading address...'),
                                 ],
                               )
-                            : Row(
-                                children: [
-                                  const Icon(Icons.location_on, size: 20),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _selectedAddress!,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
+                            : _selectedAddress != null
+                                ? Row(
+                                    children: [
+                                      const Icon(Icons.location_on,
+                                          size: 20, color: Colors.blue),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _selectedAddress!,
+                                          style: const TextStyle(fontSize: 14),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : const Row(
+                                    children: [
+                                      Icon(Icons.touch_app,
+                                          size: 20, color: Colors.grey),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Tap on the map to select a location',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                      ),
+                    ),
+                  ),
+
+                // Instruction card when no location is selected
+                if (_selectedPosition == null)
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: Card(
+                      elevation: 4,
+                      color: Colors.blue[50],
+                      child: const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            Icon(Icons.touch_app, size: 32, color: Colors.blue),
+                            SizedBox(height: 8),
+                            Text(
+                              'Tap anywhere on the map to select a location',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'or',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search,
+                                    size: 16, color: Colors.grey),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Use the search button above',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -267,14 +515,29 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                     bottom: 100,
                     left: 16,
                     right: 16,
-                    child: ElevatedButton.icon(
-                      onPressed: _confirmSelection,
-                      icon: const Icon(Icons.check_circle),
-                      label: const Text('Confirm Location'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoadingAddress ? null : _confirmSelection,
+                        icon: _isLoadingAddress
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.check_circle),
+                        label: Text(_isLoadingAddress
+                            ? 'Loading Address...'
+                            : 'Confirm Location'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
                     ),
                   ),

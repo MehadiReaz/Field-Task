@@ -326,15 +326,15 @@ class TaskDetailView extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          '${task.latitude.toStringAsFixed(6)}, ${task.longitude.toStringAsFixed(6)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                            color: Colors.grey[600],
-                          ),
-                        ),
+                        // const SizedBox(height: 8),
+                        // SelectableText(
+                        //   '${task.latitude.toStringAsFixed(6)}, ${task.longitude.toStringAsFixed(6)}',
+                        //   style: TextStyle(
+                        //     fontSize: 12,
+                        //     fontFamily: 'monospace',
+                        //     color: Colors.grey[600],
+                        //   ),
+                        // ),
                         if (task.address != null) ...[
                           const SizedBox(height: 8),
                           SelectableText(
@@ -687,7 +687,8 @@ class TaskDetailView extends StatelessWidget {
   }
 }
 
-Future<bool> _showCheckInDialog(BuildContext context, Task task, {Position? prefetchedPosition}) async {
+Future<bool> _showCheckInDialog(BuildContext context, Task task,
+    {Position? prefetchedPosition}) async {
   Position? position = prefetchedPosition;
   BuildContext? progressContext;
 
@@ -738,7 +739,7 @@ Future<bool> _showCheckInDialog(BuildContext context, Task task, {Position? pref
     }
 
     // At this point we should have a valid position
-  final pos = position;
+    final pos = position;
 
     // Calculate distance from task location
     final distance = _calculateDistance(
