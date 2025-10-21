@@ -38,6 +38,22 @@ service cloud.firestore {
       return userExists() && getUserRole() in ['admin', 'manager', 'agent'];
     }
     
+    // Helper to check if user has access to task
+    function hasTaskAccess() {
+      return resource.data.createdBy == request.auth.uid ||
+             resource.data.assignedTo == request.auth.uid;
+    }
+    
+    // Helper to check if update is only marking task as expired
+    function isExpiryUpdate() {
+      // Allow if only updating status to expired and metadata
+      let allowedFields = ['status', 'metadata', 'updatedAt'];
+      let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+      
+      return request.resource.data.status == 'expired' &&
+             changedFields.hasOnly(allowedFields);
+    }
+    
     // ========== USERS COLLECTION ==========
     match /users/{userId} {
       // Allow user creation - any authenticated user can create their own profile
@@ -72,14 +88,15 @@ service cloud.firestore {
         request.resource.data.createdBy == request.auth.uid;
       
       // Update:
+      // - Allow expiry updates if user has task access (system operation)
       // - Agents can update tasks they created or are assigned to
       // - Managers can update any task
       // - Admins can update any task
       allow update: if isAuthenticated() && (
-        (isAgent() && (
-          resource.data.createdBy == request.auth.uid ||
-          resource.data.assignedTo == request.auth.uid
-        )) ||
+        // Allow automatic expiry updates for tasks user has access to
+        (hasTaskAccess() && isExpiryUpdate()) ||
+        // Normal update rules
+        (isAgent() && hasTaskAccess()) ||
         (isManager()) ||
         (isAdmin())
       );
@@ -136,6 +153,17 @@ service cloud.firestore {
       // Any authenticated user can read analytics
       allow read: if isAuthenticated();
       allow write: if false;  // Only backend Cloud Functions
+    }
+    
+    // ========== DASHBOARD COLLECTION ==========
+    // Stores task count statistics per user
+    match /dashboard/{userId} {
+      // Users can only read their own dashboard
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // System/server can write (backend operations)
+      // In practice, this is updated by the app when online
+      allow write: if isAuthenticated() && isOwner(userId);
     }
     
     // ========== AREAS COLLECTION ==========
