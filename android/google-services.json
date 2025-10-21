@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "609949484977-i9dh5le3aq007vbpmfev2mmro27j1u08.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.task_trackr.app.task_trackr",
+            "certificate_hash": "db676d87ebd0dde907763b85353574f43625898e"
+          }
+        },
+        {
           "client_id": "609949484977-rjgfvnrmiqavl8g1t1flv69ar0oqd2im.apps.googleusercontent.com",
           "client_type": 3
         }
