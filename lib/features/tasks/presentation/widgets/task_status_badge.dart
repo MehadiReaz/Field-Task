@@ -77,7 +77,13 @@ class TaskStatusBadge extends StatelessWidget {
         );
       case TaskStatus.cancelled:
         return _StatusConfig(
-          label: 'Cancelled',
+          label: 'Expired',
+          icon: Icons.cancel,
+          color: Colors.red,
+        );
+      case TaskStatus.expired:
+        return _StatusConfig(
+          label: 'Expired',
           icon: Icons.cancel,
           color: Colors.red,
         );

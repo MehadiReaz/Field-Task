@@ -234,22 +234,22 @@ class _TaskFormViewState extends State<TaskFormView> {
 
                   // Location Selection
                   Card(
-                    elevation: 2,
+                    elevation: 0,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header
-                          Row(
+                          const Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.location_on,
                                 color: Colors.blue,
                                 size: 24,
                               ),
-                              const SizedBox(width: 12),
-                              const Expanded(
+                              SizedBox(width: 12),
+                              Expanded(
                                 child: Text(
                                   'Task Location',
                                   style: TextStyle(
@@ -291,91 +291,110 @@ class _TaskFormViewState extends State<TaskFormView> {
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 12),
 
-                          const Text(
-                            'OR',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  color: Colors.grey[400],
+                                  thickness: 1,
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text(
+                                  'OR',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                  color: Colors.grey[400],
+                                  thickness: 1,
+                                ),
+                              ),
+                            ],
                           ),
 
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 12),
 
-                          // Manual Latitude Input
-                          TextFormField(
-                            controller: _latitudeController,
-                            decoration: const InputDecoration(
-                              labelText: 'Latitude',
-                              hintText: 'e.g., 23.8103',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.place, size: 20),
-                              isDense: true,
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                              signed: true,
-                            ),
-                            onChanged: (value) {
-                              if (value.isNotEmpty) {
-                                _selectedLatitude = double.tryParse(value);
-                              }
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Latitude is required';
-                              }
-                              final lat = double.tryParse(value);
-                              if (lat == null) {
-                                return 'Invalid latitude';
-                              }
-                              if (lat < -90 || lat > 90) {
-                                return 'Latitude must be between -90 and 90';
-                              }
-                              return null;
-                            },
-                            enabled: !isLoading,
-                          ),
+                          // // Manual Latitude Input
+                          // TextFormField(
+                          //   controller: _latitudeController,
+                          //   decoration: const InputDecoration(
+                          //       labelText: 'Latitude',
+                          //       hintText: 'e.g., 23.8103',
+                          //       border: OutlineInputBorder(),
+                          //       prefixIcon: Icon(Icons.place, size: 20),
+                          //       isDense: true,
+                          //   ),
+                          //   keyboardType: const TextInputType.numberWithOptions(
+                          //       decimal: true,
+                          //       signed: true,
+                          //   ),
+                          //   onChanged: (value) {
+                          //       if (value.isNotEmpty) {
+                          //           _selectedLatitude = double.tryParse(value);
+                          //       }
+                          //   },
+                          //   validator: (value) {
+                          //       if (value == null || value.isEmpty) {
+                          //           return 'Latitude is required';
+                          //       }
+                          //       final lat = double.tryParse(value);
+                          //       if (lat == null) {
+                          //           return 'Invalid latitude';
+                          //       }
+                          //       if (lat < -90 || lat > 90) {
+                          //           return 'Latitude must be between -90 and 90';
+                          //       }
+                          //       return null;
+                          //   },
+                          //   enabled: !isLoading,
+                          // ),
 
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 12),
 
-                          // Manual Longitude Input
-                          TextFormField(
-                            controller: _longitudeController,
-                            decoration: const InputDecoration(
-                              labelText: 'Longitude',
-                              hintText: 'e.g., 90.4125',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.place, size: 20),
-                              isDense: true,
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                              signed: true,
-                            ),
-                            onChanged: (value) {
-                              if (value.isNotEmpty) {
-                                _selectedLongitude = double.tryParse(value);
-                              }
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Longitude is required';
-                              }
-                              final lng = double.tryParse(value);
-                              if (lng == null) {
-                                return 'Invalid longitude';
-                              }
-                              if (lng < -180 || lng > 180) {
-                                return 'Longitude must be between -180 and 180';
-                              }
-                              return null;
-                            },
-                            enabled: !isLoading,
-                          ),
+                          // // Manual Longitude Input
+                          // TextFormField(
+                          //   controller: _longitudeController,
+                          //   decoration: const InputDecoration(
+                          //       labelText: 'Longitude',
+                          //       hintText: 'e.g., 90.4125',
+                          //       border: OutlineInputBorder(),
+                          //       prefixIcon: Icon(Icons.place, size: 20),
+                          //       isDense: true,
+                          //   ),
+                          //   keyboardType: const TextInputType.numberWithOptions(
+                          //       decimal: true,
+                          //       signed: true,
+                          //   ),
+                          //   onChanged: (value) {
+                          //       if (value.isNotEmpty) {
+                          //           _selectedLongitude = double.tryParse(value);
+                          //       }
+                          //   },
+                          //   validator: (value) {
+                          //       if (value == null || value.isEmpty) {
+                          //           return 'Longitude is required';
+                          //       }
+                          //       final lng = double.tryParse(value);
+                          //       if (lng == null) {
+                          //           return 'Invalid longitude';
+                          //       }
+                          //       if (lng < -180 || lng > 180) {
+                          //           return 'Longitude must be between -180 and 180';
+                          //       }
+                          //       return null;
+                          //   },
+                          //   enabled: !isLoading,
+                          // ),
 
                           if (_selectedAddress != null) ...[
                             const SizedBox(height: 12),
@@ -399,10 +418,8 @@ class _TaskFormViewState extends State<TaskFormView> {
                                   Expanded(
                                     child: Text(
                                       _selectedAddress!,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black87,
-                                      ),
+                                      style:
+                                          const TextStyle(color: Colors.blue),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -412,20 +429,34 @@ class _TaskFormViewState extends State<TaskFormView> {
                             ),
                           ],
 
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 12),
 
-                          const Divider(),
+                          // const Divider(),
 
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 12),
 
                           // Map Selection (Optional)
-                          SizedBox(
+                          Container(
                             width: double.infinity,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.blue.withOpacity(0.3),
+                              ),
+                            ),
                             child: TextButton.icon(
                               onPressed:
                                   isLoading ? null : _selectLocationOnMap,
-                              icon: const Icon(Icons.map),
-                              label: const Text('Select on Map (Optional)'),
+                              icon: const Icon(
+                                Icons.map,
+                                size: 16,
+                                color: Colors.blue,
+                              ),
+                              label: const Text(
+                                'Select on Map',
+                              ),
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.grey[700],
                               ),

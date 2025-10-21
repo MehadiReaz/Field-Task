@@ -48,7 +48,9 @@ class SliderButtonWidget extends StatefulWidget {
   final Widget icon;
 
   /// Callback function executed when slider is completed.
-  final VoidCallback action;
+  /// Returns true if the action was successful and the slider should be dismissed,
+  /// false if the action was cancelled and the slider should remain visible.
+  final Future<bool> Function() action;
 
   /// Enable or disable shimmer animation effect.
   final bool shimmer;
@@ -68,6 +70,11 @@ class SliderButtonWidget extends StatefulWidget {
 
   /// Set text direction (true for LTR, false for RTL).
   final bool isLtr;
+
+  /// Optional callback triggered when the user first touches the slider
+  /// (before dragging). Useful for prefetching async work (like location)
+  /// so the confirmation step can complete faster.
+  final Future<void> Function()? onDragStart;
 
   const SliderButtonWidget({
     super.key,
@@ -99,6 +106,7 @@ class SliderButtonWidget extends StatefulWidget {
     this.dismissible = true,
     this.dismissThresholds = 1.0,
     this.disable = false,
+    this.onDragStart,
   })  : assert(buttonSize <= height,
             'Button size must be less than or equal to height'),
         assert(dismissThresholds >= 0.0 && dismissThresholds <= 1.0,
@@ -179,9 +187,46 @@ class _SliderButtonWidgetState extends State<SliderButtonWidget> {
             ? DismissDirection.startToEnd
             : DismissDirection.endToStart: widget.dismissThresholds,
       },
-      onDismissed: _handleDismiss,
-      child: _buildButtonContainer(
-        isInteractive: true,
+      // confirmDismiss lets us run an async check (show dialog, run action)
+      // and decide whether to actually dismiss the widget. This avoids the
+      // "A dismissed Dismissible widget is still part of the tree" assertion
+      // because the Dismissible will only be dismissed if this returns true
+      // and then onDismissed can immediately remove it from the tree.
+      confirmDismiss: (direction) async {
+        try {
+          final shouldDismiss = await widget.action();
+
+          // Provide vibration feedback for successful confirmation
+          if (widget.vibrationFlag && shouldDismiss) {
+            _triggerVibration();
+          }
+
+          // Allow the Dismissible to be removed from the tree only when the
+          // action succeeded and the widget is configured to be dismissible.
+          return shouldDismiss && widget.dismissible;
+        } catch (e) {
+          return false;
+        }
+      },
+      onDismissed: (direction) {
+        // Remove the Dismissible from the tree immediately as required by
+        // the framework when a Dismissible is dismissed.
+        setState(() {
+          _isVisible = false;
+        });
+      },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          try {
+            widget.onDragStart?.call();
+          } catch (e) {
+            // ignore
+          }
+        },
+        child: _buildButtonContainer(
+          isInteractive: true,
+        ),
       ),
     );
   }
@@ -212,26 +257,7 @@ class _SliderButtonWidgetState extends State<SliderButtonWidget> {
     );
   }
 
-  Future<void> _handleDismiss(DismissDirection direction) async {
-    setState(() {
-      _isVisible = false;
-    });
-
-    // Execute the action callback
-    widget.action();
-
-    // Provide haptic feedback if enabled
-    if (widget.vibrationFlag) {
-      await _triggerVibration();
-    }
-
-    // Reset visibility if not dismissible
-    if (!widget.dismissible) {
-      setState(() {
-        _isVisible = true;
-      });
-    }
-  }
+  
 
   Future<void> _triggerVibration() async {
     try {

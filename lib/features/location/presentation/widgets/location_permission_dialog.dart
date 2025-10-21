@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../bloc/location_bloc.dart';
 
 class LocationPermissionDialog extends StatelessWidget {
@@ -18,6 +19,9 @@ class LocationPermissionDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       title: Row(
         children: [
           Icon(
@@ -25,49 +29,57 @@ class LocationPermissionDialog extends StatelessWidget {
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 8),
-          Text(title),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(message),
-          const SizedBox(height: 16),
-          const Text(
-            'Location permission is used to:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          _buildPermissionReason(
-            Icons.task_alt,
-            'Complete tasks at specific locations',
-          ),
-          _buildPermissionReason(
-            Icons.map,
-            'Show tasks on a map',
-          ),
-          _buildPermissionReason(
-            Icons.near_me,
-            'Find tasks near you',
-          ),
-          _buildPermissionReason(
-            Icons.location_searching,
-            'Track check-in locations',
-          ),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            const SizedBox(height: 16),
+            const Text(
+              'Location permission is used to:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _buildPermissionReason(
+              Icons.task_alt,
+              'Complete tasks at specific locations',
+            ),
+            _buildPermissionReason(
+              Icons.map,
+              'Show tasks on a map',
+            ),
+            _buildPermissionReason(
+              Icons.near_me,
+              'Find tasks near you',
+            ),
+            _buildPermissionReason(
+              Icons.location_searching,
+              'Track check-in locations',
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: () {
+        ElevatedButton.icon(
+          icon: const Icon(Icons.my_location),
+          onPressed: () async {
             context.read<LocationBloc>().add(const RequestPermissionEvent());
             Navigator.of(context).pop(true);
           },
-          child: const Text('Grant Permission'),
+          label: const Text('Grant Permission'),
         ),
       ],
     );
@@ -100,6 +112,7 @@ class LocationPermissionDialog extends StatelessWidget {
   }
 }
 
+/// Dialog for when permission is permanently denied.
 class LocationPermissionDeniedDialog extends StatelessWidget {
   final String title;
   final String message;
@@ -108,20 +121,20 @@ class LocationPermissionDeniedDialog extends StatelessWidget {
     super.key,
     this.title = 'Location Permission Denied',
     this.message =
-        'Location permission was denied. Some features may not work properly. You can enable it in app settings.',
+        'Location permission was denied permanently. Some features may not work properly. You can enable it in app settings.',
   });
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Row(
         children: [
-          Icon(
-            Icons.location_off,
-            color: Colors.red[700],
-          ),
+          Icon(Icons.location_off, color: Colors.red[700]),
           const SizedBox(width: 8),
-          Text(title),
+          Expanded(
+            child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
       content: Text(message),
@@ -130,13 +143,21 @@ class LocationPermissionDeniedDialog extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: () {
-            // Open app settings (requires permission_handler package)
+        ElevatedButton.icon(
+          icon: const Icon(Icons.settings),
+          onPressed: () async {
             Navigator.of(context).pop();
-            // TODO: openAppSettings() from permission_handler
+            try {
+              // top-level function from permission_handler
+              final opened = await openAppSettings();
+              // optional: handle returned bool if you want
+              debugPrint('openAppSettings returned: $opened');
+            } catch (e) {
+              // fallback / log
+              debugPrint('Could not open app settings: $e');
+            }
           },
-          child: const Text('Open Settings'),
+          label: const Text('Open Settings'),
         ),
       ],
     );

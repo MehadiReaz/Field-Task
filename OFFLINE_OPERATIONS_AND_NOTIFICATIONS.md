@@ -33,7 +33,7 @@ Future<Either<Failure, List<Task>>> getTasksByStatus(String status) async {
 ```
 
 **Result:**
-- ✅ History page shows completed/cancelled tasks offline
+- ✅ History page shows completed/expired tasks offline
 - ✅ Task filtering works offline
 - ✅ All CRUD operations work offline
 
@@ -178,7 +178,7 @@ BottomNavigationBarItem(
 1. User created tasks and marked them complete while offline
 2. Navigate to History tab
 3. **Shows completed tasks** from local database
-4. Filter by completed/cancelled works
+4. Filter by completed/expired works
 5. Sort by recent/oldest/priority works
 6. When online, syncs and shows server data
 

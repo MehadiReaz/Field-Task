@@ -3,7 +3,8 @@ enum TaskStatus {
   checkedIn('checked_in'),
   checkedOut('checked_out'),
   completed('completed'),
-  cancelled('cancelled');
+  cancelled('cancelled'),
+  expired('expired');
 
   final String value;
   const TaskStatus(this.value);
@@ -27,6 +28,8 @@ enum TaskStatus {
         return 'Completed';
       case TaskStatus.cancelled:
         return 'Cancelled';
+      case TaskStatus.expired:
+        return 'Expired';
     }
   }
 }

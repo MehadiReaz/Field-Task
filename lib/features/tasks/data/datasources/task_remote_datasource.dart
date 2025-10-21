@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../core/enums/task_status.dart';
+import '../../../../core/services/dashboard_service.dart';
+import '../../../../core/services/task_expiry_service.dart';
 import '../models/task_model.dart';
 import '../models/task_page_model.dart';
 
@@ -44,8 +46,15 @@ abstract class TaskRemoteDataSource {
 class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseAuth firebaseAuth;
+  final DashboardService dashboardService;
+  final TaskExpiryService taskExpiryService;
 
-  TaskRemoteDataSourceImpl(this.firestore, this.firebaseAuth);
+  TaskRemoteDataSourceImpl(
+    this.firestore,
+    this.firebaseAuth,
+    this.dashboardService,
+    this.taskExpiryService,
+  );
 
   String get _currentUserId {
     final user = firebaseAuth.currentUser;
@@ -105,6 +114,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     bool showExpiredOnly = false,
   }) async {
     try {
+      // Check and update expired tasks first
+      await taskExpiryService.checkAndUpdateExpiredTasks();
+      
       final allTasks = await _fetchAndDeduplicateTasks();
 
       // Apply filters
@@ -122,10 +134,10 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           return task.status.value.toLowerCase() == status.toLowerCase();
         }).toList();
       } else {
-        // Default: show active tasks only
+        // Default: show all tasks (including completed)
+        // This allows filter chips to show accurate counts
         filteredTasks = allTasks.where((task) {
           return task.status != TaskStatus.checkedOut &&
-              task.status != TaskStatus.completed &&
               task.status != TaskStatus.cancelled;
         }).toList();
       }
@@ -214,6 +226,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   @override
   Future<TaskModel> getTaskById(String id) async {
     try {
+      // Check expiry for this specific task
+      await taskExpiryService.checkAndUpdateSingleTask(id);
+      
       final doc = await firestore.collection('tasks').doc(id).get();
       if (!doc.exists) {
         throw const FirestoreException('Task not found');
@@ -257,6 +272,11 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       );
 
       await docRef.set(taskWithId.toFirestore());
+      
+      // Update dashboard counts
+      final isExpired = taskExpiryService.isTaskExpired(task.dueDateTime, task.status);
+      await dashboardService.incrementCount(task.status, isExpired: isExpired);
+      
       return taskWithId;
     } catch (e) {
       throw FirestoreException('Failed to create task: $e');
@@ -266,10 +286,27 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   @override
   Future<TaskModel> updateTask(TaskModel task) async {
     try {
+      // Get old task to compare status change
+      final oldTask = await getTaskById(task.id);
+      
       final now = DateTime.now();
       await firestore.collection('tasks').doc(task.id).update(
             task.toFirestore()..['updatedAt'] = now.toIso8601String(),
           );
+      
+      // If status changed, update dashboard counts
+      if (oldTask.status != task.status) {
+        final wasExpired = taskExpiryService.isTaskExpired(oldTask.dueDateTime, oldTask.status);
+        final isExpired = taskExpiryService.isTaskExpired(task.dueDateTime, task.status);
+        
+        await dashboardService.updateStatusCounts(
+          oldStatus: oldTask.status,
+          newStatus: task.status,
+          wasExpired: wasExpired,
+          isExpired: isExpired,
+        );
+      }
+      
       return task;
     } catch (e) {
       throw FirestoreException('Failed to update task: $e');
@@ -279,7 +316,14 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   @override
   Future<void> deleteTask(String id) async {
     try {
+      // Get task before deleting to update counts
+      final task = await getTaskById(id);
+      
       await firestore.collection('tasks').doc(id).delete();
+      
+      // Update dashboard counts
+      final isExpired = taskExpiryService.isTaskExpired(task.dueDateTime, task.status);
+      await dashboardService.decrementCount(task.status, isExpired: isExpired);
     } catch (e) {
       throw FirestoreException('Failed to delete task: $e');
     }
@@ -327,6 +371,17 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
               ..['updatedAt'] = now.toIso8601String()
               ..['checkedInAt'] = now.toIso8601String(),
           );
+
+      // Update dashboard counts (pending -> checked in)
+      final wasExpired = taskExpiryService.isTaskExpired(task.dueDateTime, task.status);
+      final isExpired = taskExpiryService.isTaskExpired(updatedTask.dueDateTime, TaskStatus.checkedIn);
+      
+      await dashboardService.updateStatusCounts(
+        oldStatus: task.status,
+        newStatus: TaskStatus.checkedIn,
+        wasExpired: wasExpired,
+        isExpired: isExpired,
+      );
 
       return updatedTask;
     } catch (e) {
@@ -420,6 +475,16 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
               ..['updatedAt'] = now.toIso8601String()
               ..['completedAt'] = now.toIso8601String(),
           );
+
+      // Update dashboard counts (old status -> completed)
+      final wasExpired = taskExpiryService.isTaskExpired(task.dueDateTime, task.status);
+      
+      await dashboardService.updateStatusCounts(
+        oldStatus: task.status,
+        newStatus: TaskStatus.completed,
+        wasExpired: wasExpired,
+        isExpired: false, // Completed tasks are not expired
+      );
 
       return updatedTask;
     } catch (e) {

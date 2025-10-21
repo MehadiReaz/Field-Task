@@ -1,3 +1,4 @@
+// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 // **************************************************************************
@@ -20,7 +21,11 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 import 'core/network/network_info.dart' as _i75;
 import 'core/network/network_info_impl.dart' as _i973;
 import 'core/services/connectivity_service.dart' as _i524;
+import 'core/services/dashboard_service.dart' as _i662;
+import 'core/services/expired_tasks_checker_service.dart' as _i553;
+import 'core/services/local_notification_service.dart' as _i102;
 import 'core/services/notification_service.dart' as _i1011;
+import 'core/services/task_expiry_service.dart' as _i930;
 import 'database/database.dart' as _i565;
 import 'features/auth/data/datasources/auth_local_datasource.dart' as _i1043;
 import 'features/auth/data/datasources/auth_remote_datasource.dart' as _i588;
@@ -43,13 +48,21 @@ import 'features/location/domain/usecases/request_location_permission.dart'
     as _i460;
 import 'features/location/domain/usecases/validate_proximity.dart' as _i622;
 import 'features/location/presentation/bloc/location_bloc.dart' as _i738;
+import 'features/settings/data/theme_repository.dart' as _i615;
+import 'features/settings/presentation/notifier/theme_notifier.dart' as _i1018;
 import 'features/sync/data/datasources/sync_datasource.dart' as _i428;
 import 'features/sync/domain/services/sync_service.dart' as _i443;
 import 'features/sync/presentation/bloc/sync_bloc.dart' as _i416;
 import 'features/tasks/data/datasources/task_local_datasource.dart' as _i361;
 import 'features/tasks/data/datasources/task_remote_datasource.dart' as _i403;
+import 'features/tasks/data/datasources/task_stats_local_datasource.dart'
+    as _i616;
+import 'features/tasks/data/datasources/task_stats_remote_datasource.dart'
+    as _i875;
 import 'features/tasks/data/repositories/task_repository_impl.dart' as _i969;
+import 'features/tasks/data/repositories/task_stats_repository.dart' as _i126;
 import 'features/tasks/domain/repositories/task_repository.dart' as _i356;
+import 'features/tasks/domain/repositories/task_stats_repository.dart' as _i366;
 import 'features/tasks/domain/usecases/check_in_task.dart' as _i754;
 import 'features/tasks/domain/usecases/checkout_task.dart' as _i797;
 import 'features/tasks/domain/usecases/complete_task.dart' as _i202;
@@ -58,12 +71,14 @@ import 'features/tasks/domain/usecases/delete_task.dart' as _i335;
 import 'features/tasks/domain/usecases/filter_tasks.dart' as _i690;
 import 'features/tasks/domain/usecases/get_expired_tasks.dart' as _i27;
 import 'features/tasks/domain/usecases/get_task_by_id.dart' as _i869;
+import 'features/tasks/domain/usecases/get_task_stats.dart' as _i768;
 import 'features/tasks/domain/usecases/get_tasks.dart' as _i441;
 import 'features/tasks/domain/usecases/get_tasks_by_status.dart' as _i976;
 import 'features/tasks/domain/usecases/get_tasks_page.dart' as _i968;
 import 'features/tasks/domain/usecases/search_tasks.dart' as _i175;
 import 'features/tasks/domain/usecases/update_task.dart' as _i184;
 import 'features/tasks/presentation/bloc/task_bloc.dart' as _i1006;
+import 'features/tasks/presentation/bloc/task_stats_bloc.dart' as _i0;
 import 'injection_container.dart' as _i809;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -80,6 +95,8 @@ extension GetItInjectableX on _i174.GetIt {
     final registerModule = _$RegisterModule();
     gh.lazySingleton<_i524.ConnectivityService>(
         () => _i524.ConnectivityService());
+    gh.lazySingleton<_i102.LocalNotificationService>(
+        () => _i102.LocalNotificationService());
     gh.lazySingleton<_i1011.NotificationService>(
         () => _i1011.NotificationService());
     gh.lazySingleton<_i59.FirebaseAuth>(() => registerModule.firebaseAuth);
@@ -92,17 +109,26 @@ extension GetItInjectableX on _i174.GetIt {
       () => registerModule.sharedPreferences,
       preResolve: true,
     );
+    gh.lazySingleton<_i615.ThemeRepository>(
+        () => registerModule.themeRepository);
+    gh.lazySingleton<_i1018.ThemeBloc>(() => registerModule.themeBloc);
     gh.lazySingleton<_i558.FlutterSecureStorage>(
         () => registerModule.secureStorage);
     gh.lazySingleton<_i942.LocationDataSource>(
         () => _i942.LocationDataSourceImpl());
     gh.lazySingleton<_i55.LocationRepository>(
         () => _i1061.LocationRepositoryImpl(gh<_i942.LocationDataSource>()));
-    gh.lazySingleton<_i403.TaskRemoteDataSource>(
-        () => _i403.TaskRemoteDataSourceImpl(
-              gh<_i974.FirebaseFirestore>(),
-              gh<_i59.FirebaseAuth>(),
+    gh.lazySingleton<_i662.DashboardService>(() => _i662.DashboardService(
+          firestore: gh<_i974.FirebaseFirestore>(),
+          firebaseAuth: gh<_i59.FirebaseAuth>(),
+        ));
+    gh.factory<_i875.TaskStatsRemoteDataSource>(
+        () => _i875.TaskStatsRemoteDataSourceImpl(
+              firestore: gh<_i974.FirebaseFirestore>(),
+              firebaseAuth: gh<_i59.FirebaseAuth>(),
             ));
+    gh.factory<_i616.TaskStatsLocalDataSource>(() =>
+        _i616.TaskStatsLocalDataSourceImpl(database: gh<_i565.AppDatabase>()));
     gh.lazySingleton<_i75.NetworkInfo>(
         () => _i973.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i1043.AuthLocalDataSource>(
@@ -121,10 +147,27 @@ extension GetItInjectableX on _i174.GetIt {
               firestore: gh<_i974.FirebaseFirestore>(),
               googleSignIn: gh<_i116.GoogleSignIn>(),
             ));
+    gh.lazySingleton<_i930.TaskExpiryService>(() => _i930.TaskExpiryService(
+          firestore: gh<_i974.FirebaseFirestore>(),
+          firebaseAuth: gh<_i59.FirebaseAuth>(),
+          dashboardService: gh<_i662.DashboardService>(),
+        ));
+    gh.lazySingleton<_i403.TaskRemoteDataSource>(
+        () => _i403.TaskRemoteDataSourceImpl(
+              gh<_i974.FirebaseFirestore>(),
+              gh<_i59.FirebaseAuth>(),
+              gh<_i662.DashboardService>(),
+              gh<_i930.TaskExpiryService>(),
+            ));
     gh.lazySingleton<_i428.SyncDataSource>(
         () => _i428.SyncDataSourceImpl(gh<_i565.AppDatabase>()));
     gh.lazySingleton<_i361.TaskLocalDataSource>(
         () => _i361.TaskLocalDataSourceImpl(gh<_i565.AppDatabase>()));
+    gh.factory<_i366.ITaskStatsRepository>(() => _i126.TaskStatsRepositoryImpl(
+          remoteDataSource: gh<_i875.TaskStatsRemoteDataSource>(),
+          localDataSource: gh<_i616.TaskStatsLocalDataSource>(),
+          networkInfo: gh<_i75.NetworkInfo>(),
+        ));
     gh.lazySingleton<_i1015.AuthRepository>(() => _i111.AuthRepositoryImpl(
           remoteDataSource: gh<_i588.AuthRemoteDataSource>(),
           localDataSource: gh<_i1043.AuthLocalDataSource>(),
@@ -153,13 +196,10 @@ extension GetItInjectableX on _i174.GetIt {
           taskRemoteDataSource: gh<_i403.TaskRemoteDataSource>(),
           connectivityService: gh<_i524.ConnectivityService>(),
         ));
-    gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
-          signInWithGoogle: gh<_i648.SignInWithGoogle>(),
-          signInWithEmail: gh<_i509.SignInWithEmail>(),
-          signOut: gh<_i872.SignOut>(),
-          getCurrentUser: gh<_i191.GetCurrentUser>(),
-          checkAuthStatus: gh<_i818.CheckAuthStatus>(),
-        ));
+    gh.factory<_i768.GetTaskStats>(
+        () => _i768.GetTaskStats(gh<_i366.ITaskStatsRepository>()));
+    gh.factory<_i768.CalculateAndSaveTaskStats>(() =>
+        _i768.CalculateAndSaveTaskStats(gh<_i366.ITaskStatsRepository>()));
     gh.factory<_i416.SyncBloc>(
         () => _i416.SyncBloc(syncService: gh<_i443.SyncService>()));
     gh.lazySingleton<_i356.TaskRepository>(() => _i969.TaskRepositoryImpl(
@@ -169,6 +209,23 @@ extension GetItInjectableX on _i174.GetIt {
           database: gh<_i565.AppDatabase>(),
           firebaseAuth: gh<_i59.FirebaseAuth>(),
           syncBloc: gh<_i416.SyncBloc>(),
+        ));
+    gh.lazySingleton<_i553.ExpiredTasksCheckerService>(
+        () => _i553.ExpiredTasksCheckerService(
+              taskRepository: gh<_i356.TaskRepository>(),
+              notificationService: gh<_i102.LocalNotificationService>(),
+            ));
+    gh.factory<_i363.AuthBloc>(() => _i363.AuthBloc(
+          signInWithGoogle: gh<_i648.SignInWithGoogle>(),
+          signInWithEmail: gh<_i509.SignInWithEmail>(),
+          signOut: gh<_i872.SignOut>(),
+          getCurrentUser: gh<_i191.GetCurrentUser>(),
+          checkAuthStatus: gh<_i818.CheckAuthStatus>(),
+          dashboardService: gh<_i662.DashboardService>(),
+        ));
+    gh.factory<_i0.TaskStatsBloc>(() => _i0.TaskStatsBloc(
+          getTaskStats: gh<_i768.GetTaskStats>(),
+          calculateAndSaveTaskStats: gh<_i768.CalculateAndSaveTaskStats>(),
         ));
     gh.factory<_i797.CheckoutTask>(
         () => _i797.CheckoutTask(gh<_i356.TaskRepository>()));

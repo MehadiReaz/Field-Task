@@ -353,6 +353,8 @@ class _FullMapPageState extends State<FullMapPage> {
         return Colors.blue.withOpacity(0.3);
       case TaskStatus.cancelled:
         return Colors.grey.withOpacity(0.3);
+      case TaskStatus.expired:
+        return Colors.red.withOpacity(0.3);
     }
   }
 }

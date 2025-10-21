@@ -25,7 +25,7 @@ context.read<TaskBloc>().add(
 - `'pending'` - Tasks not yet started
 - `'checked_in'` - Agent has checked in at location
 - `'completed'` - Finished tasks
-- `'cancelled'` - Cancelled tasks
+- `'cancelled'` - Expired tasks
 
 ### 2. Filter Expired Tasks
 ```dart

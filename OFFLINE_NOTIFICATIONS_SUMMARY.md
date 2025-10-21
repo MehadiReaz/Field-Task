@@ -3,7 +3,7 @@
 ## What Was Done
 
 ### ✅ 1. Fixed History to Work Offline
-- History page now shows completed/cancelled tasks even when offline
+- History page now shows completed/expired tasks even when offline
 - All task filtering works offline
 - Uses local database when no internet
 

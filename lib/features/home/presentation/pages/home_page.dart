@@ -107,8 +107,8 @@ class _HomePageState extends State<HomePage> {
             elevation: 8,
             items: [
               const BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard),
-                label: 'Dashboard',
+                icon: Icon(Icons.home_rounded),
+                label: 'Home',
                 tooltip: 'Overview',
               ),
               const BottomNavigationBarItem(

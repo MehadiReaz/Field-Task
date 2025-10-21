@@ -138,6 +138,17 @@ service cloud.firestore {
       allow write: if false;  // Only backend Cloud Functions
     }
     
+    // ========== DASHBOARD COLLECTION ==========
+    // Stores task count statistics per user
+    match /dashboard/{userId} {
+      // Users can only read their own dashboard
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // System/server can write (backend operations)
+      // In practice, this is updated by the app when online
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+    
     // ========== AREAS COLLECTION ==========
     match /areas/{areaId} {
       // Any authenticated user can read areas
