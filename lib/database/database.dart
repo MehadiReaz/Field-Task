@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'tables/tasks_table.dart';
 import 'tables/users_table.dart';
 import 'tables/sync_queue_table.dart';
+import 'tables/tasks_stats_table.dart';
 import 'daos/task_dao.dart';
 import 'daos/user_dao.dart';
 import 'daos/sync_queue_dao.dart';
@@ -14,7 +15,7 @@ import 'daos/sync_queue_dao.dart';
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Tasks, Users, SyncQueue],
+  tables: [Tasks, Users, SyncQueue, TasksStats],
   daos: [TaskDao, UserDao, SyncQueueDao],
 )
 class AppDatabase extends _$AppDatabase {

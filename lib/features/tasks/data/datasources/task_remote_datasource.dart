@@ -122,10 +122,10 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           return task.status.value.toLowerCase() == status.toLowerCase();
         }).toList();
       } else {
-        // Default: show active tasks only
+        // Default: show all tasks (including completed)
+        // This allows filter chips to show accurate counts
         filteredTasks = allTasks.where((task) {
           return task.status != TaskStatus.checkedOut &&
-              task.status != TaskStatus.completed &&
               task.status != TaskStatus.cancelled;
         }).toList();
       }

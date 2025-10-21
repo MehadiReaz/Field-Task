@@ -7,6 +7,8 @@ import 'app/app.dart';
 import 'firebase_options.dart';
 import 'injection_container.dart';
 import 'core/utils/logger.dart';
+import 'core/services/local_notification_service.dart';
+import 'core/services/expired_tasks_checker_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +26,18 @@ void main() async {
 
   // Setup dependency injection
   await configureDependencies();
+
+  // Initialize notification service
+  final notificationService = getIt<LocalNotificationService>();
+  await notificationService.initialize();
+  AppLogger.info('Local notification service initialized');
+
+  // Check for expired tasks on app launch
+  final expiredTasksChecker = getIt<ExpiredTasksCheckerService>();
+  // Run in background to not block app startup
+  Future.delayed(const Duration(seconds: 2), () {
+    expiredTasksChecker.checkAndNotifyExpiredTasks();
+  });
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

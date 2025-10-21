@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../injection_container.dart';
+import '../../../../core/services/expired_tasks_checker_service.dart';
 import '../../domain/entities/task.dart';
 import '../../../sync/presentation/widgets/sync_status_indicator.dart';
 import '../bloc/task_bloc.dart';
@@ -165,6 +166,60 @@ class _TaskListViewState extends State<TaskListView>
       appBar: AppBar(
         title: const Text('My Tasks'),
         elevation: 0,
+        actions: [
+          // Expired Tasks Badge
+          FutureBuilder<int>(
+            future: getIt<ExpiredTasksCheckerService>().getExpiredTasksCount(),
+            builder: (context, snapshot) {
+              final expiredCount = snapshot.data ?? 0;
+              if (expiredCount == 0) return const SizedBox.shrink();
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: InkWell(
+                  onTap: () {
+                    // Switch to expired filter
+                    setState(() {
+                      _currentFilter = 'expired';
+                    });
+                    context.read<TaskBloc>().add(
+                          const LoadExpiredTasksEvent(),
+                        );
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.red, width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.warning_rounded,
+                          color: Colors.red,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$expiredCount',
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: BlocConsumer<TaskBloc, TaskState>(
         listener: (context, state) {
@@ -370,92 +425,158 @@ class _TaskListViewState extends State<TaskListView>
     );
   }
 
-  Widget _buildFilterChips() {
-    return FadeTransition(
-      opacity: _headerController,
-      child: Container(
-        height: 60,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          itemCount: _filters.length,
-          itemBuilder: (context, index) {
-            final filter = _filters[index];
-            final isSelected = _currentFilter == filter['value'];
+  // Helper method to get count for each filter
+  int _getFilterCount(String filterValue, List<Task> allTasks) {
+    switch (filterValue) {
+      case 'all':
+        return allTasks.length;
+      case 'pending':
+        return allTasks.where((t) => t.status.value == 'pending').length;
+      case 'checked_in':
+        return allTasks.where((t) => t.status.value == 'checked_in').length;
+      case 'completed':
+        return allTasks.where((t) => t.status.value == 'completed').length;
+      case 'expired':
+        return allTasks
+            .where((t) =>
+                t.dueDateTime.isBefore(DateTime.now()) &&
+                (t.status.value == 'pending' || t.status.value == 'checked_in'))
+            .length;
+      default:
+        return 0;
+    }
+  }
 
-            return TweenAnimationBuilder<double>(
-              duration: Duration(milliseconds: 400 + (index * 100)),
-              tween: Tween(begin: 0.0, end: 1.0),
-              curve: Curves.easeOutBack,
-              builder: (context, value, child) {
-                final v = value.clamp(0.0, 1.0);
-                return Transform.scale(
-                  scale: v,
-                  child: Opacity(
-                    opacity: v,
-                    child: child,
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  child: FilterChip(
-                    selected: isSelected,
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          filter['icon'] as IconData,
-                          size: 18,
-                          color: isSelected
-                              ? Colors.white
-                              : (filter['color'] as Color),
+  Widget _buildFilterChips() {
+    return BlocBuilder<TaskBloc, TaskState>(
+      builder: (context, state) {
+        // Get all tasks for counting
+        List<Task> allTasks = [];
+        if (state is TasksLoaded) {
+          allTasks = state.tasks;
+        } else if (state is TaskRefreshing) {
+          allTasks = state.currentTasks;
+        }
+
+        return FadeTransition(
+          opacity: _headerController,
+          child: Container(
+            height: 60,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: _filters.length,
+              itemBuilder: (context, index) {
+                final filter = _filters[index];
+                final isSelected = _currentFilter == filter['value'];
+                final count =
+                    _getFilterCount(filter['value'] as String, allTasks);
+
+                return TweenAnimationBuilder<double>(
+                  duration: Duration(milliseconds: 400 + (index * 100)),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    final v = value.clamp(0.0, 1.0);
+                    return Transform.scale(
+                      scale: v,
+                      child: Opacity(
+                        opacity: v,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: FilterChip(
+                        selected: isSelected,
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              filter['icon'] as IconData,
+                              size: 18,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (filter['color'] as Color),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              filter['label'] as String,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.grey[800],
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                            if (count > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.white.withOpacity(0.3)
+                                      : (filter['color'] as Color)
+                                          .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (filter['color'] as Color),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          filter['label'] as String,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.grey[800],
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                        onSelected: (selected) {
+                          if (selected) {
+                            _applyFilter(filter['value'] as String);
+                          }
+                        },
+                        backgroundColor: Colors.grey[100],
+                        selectedColor: filter['color'] as Color,
+                        checkmarkColor: Colors.white,
+                        elevation: isSelected ? 4 : 0,
+                        shadowColor:
+                            (filter['color'] as Color).withOpacity(0.4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: isSelected
+                                ? filter['color'] as Color
+                                : Colors.grey[300]!,
+                            width: isSelected ? 0 : 1,
                           ),
                         ),
-                      ],
-                    ),
-                    onSelected: (selected) {
-                      if (selected) {
-                        _applyFilter(filter['value'] as String);
-                      }
-                    },
-                    backgroundColor: Colors.grey[100],
-                    selectedColor: filter['color'] as Color,
-                    checkmarkColor: Colors.white,
-                    elevation: isSelected ? 4 : 0,
-                    shadowColor: (filter['color'] as Color).withOpacity(0.4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected
-                            ? filter['color'] as Color
-                            : Colors.grey[300]!,
-                        width: isSelected ? 0 : 1,
                       ),
                     ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 

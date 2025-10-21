@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geocoding/geocoding.dart'; // 👈 for address search
 import '../../../../injection_container.dart';
 import '../bloc/location_bloc.dart';
 
@@ -78,6 +79,70 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
     }
   }
 
+  // 👇 New: open a dialog for searching an address
+  Future<void> _openSearchDialog() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Search Location'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter a place or address',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Search'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await _searchLocation(result);
+    }
+  }
+
+  // 👇 New: use geocoding to find coordinates for searched address
+  Future<void> _searchLocation(String query) async {
+    setState(() {
+      _isLoadingAddress = true;
+    });
+
+    try {
+      final locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        final newPosition = LatLng(location.latitude, location.longitude);
+
+        setState(() {
+          _selectedPosition = newPosition;
+          _selectedAddress = query;
+          _isLoadingAddress = false;
+        });
+
+        _mapController.move(newPosition, 15.0);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location not found.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error searching location: $e')),
+      );
+      setState(() => _isLoadingAddress = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -86,6 +151,11 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
         appBar: AppBar(
           title: const Text('Select Location'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: 'Search Location',
+              onPressed: _openSearchDialog,
+            ),
             if (_selectedPosition != null)
               IconButton(
                 icon: const Icon(Icons.check),
@@ -120,9 +190,7 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
           },
           builder: (context, state) {
             if (state is LocationLoading && _selectedPosition == null) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
 
             return Stack(
@@ -157,7 +225,6 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                       ),
                   ],
                 ),
-                // Address display card
                 if (_selectedAddress != null || _isLoadingAddress)
                   Positioned(
                     top: 16,
@@ -195,10 +262,9 @@ class _MapSelectionPageState extends State<MapSelectionPage> {
                       ),
                     ),
                   ),
-                // Confirm button
                 if (_selectedPosition != null)
                   Positioned(
-                    bottom: 80,
+                    bottom: 100,
                     left: 16,
                     right: 16,
                     child: ElevatedButton.icon(

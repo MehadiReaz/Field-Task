@@ -14,16 +14,16 @@ class SettingsPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.background,
-              Theme.of(context).colorScheme.primary.withOpacity(0.05),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        // decoration: BoxDecoration(
+        //   gradient: LinearGradient(
+        //     colors: [
+        //       Theme.of(context).colorScheme.background,
+        //       Theme.of(context).colorScheme.primary.withOpacity(0.05),
+        //     ],
+        //     begin: Alignment.topCenter,
+        //     end: Alignment.bottomCenter,
+        //   ),
+        // ),
         child: BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, state) => ListView(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -38,7 +38,7 @@ class SettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Card(
-                elevation: 4,
+                elevation: 0,
                 shadowColor:
                     Theme.of(context).colorScheme.primary.withOpacity(0.15),
                 shape: RoundedRectangleBorder(
@@ -111,7 +111,7 @@ class SettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Card(
-                elevation: 4,
+                elevation: 0,
                 shadowColor:
                     Theme.of(context).colorScheme.primary.withOpacity(0.15),
                 shape: RoundedRectangleBorder(
@@ -198,19 +198,19 @@ class SettingsPage extends StatelessWidget {
   }) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            color: Theme.of(context).colorScheme.primary,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
+        // Container(
+        //   padding: const EdgeInsets.all(8),
+        //   decoration: BoxDecoration(
+        //     color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        //     borderRadius: BorderRadius.circular(8),
+        //   ),
+        //   child: Icon(
+        //     icon,
+        //     color: Theme.of(context).colorScheme.primary,
+        //     size: 20,
+        //   ),
+        // ),
+        // const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,14 +224,14 @@ class SettingsPage extends StatelessWidget {
                   letterSpacing: 0.2,
                 ),
               ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
+              // Text(
+              //   subtitle,
+              //   style: TextStyle(
+              //     fontSize: 14,
+              //     color:
+              //         Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              //   ),
+              // ),
             ],
           ),
         ),

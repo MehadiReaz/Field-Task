@@ -2086,12 +2086,496 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueEntity> {
   }
 }
 
+class $TasksStatsTable extends TasksStats
+    with TableInfo<$TasksStatsTable, TaskStatsEntity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TasksStatsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _totalTasksMeta =
+      const VerificationMeta('totalTasks');
+  @override
+  late final GeneratedColumn<int> totalTasks = GeneratedColumn<int>(
+      'total_tasks', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _pendingTasksMeta =
+      const VerificationMeta('pendingTasks');
+  @override
+  late final GeneratedColumn<int> pendingTasks = GeneratedColumn<int>(
+      'pending_tasks', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _completedTasksMeta =
+      const VerificationMeta('completedTasks');
+  @override
+  late final GeneratedColumn<int> completedTasks = GeneratedColumn<int>(
+      'completed_tasks', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _checkedInTasksMeta =
+      const VerificationMeta('checkedInTasks');
+  @override
+  late final GeneratedColumn<int> checkedInTasks = GeneratedColumn<int>(
+      'checked_in_tasks', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _expiredTasksMeta =
+      const VerificationMeta('expiredTasks');
+  @override
+  late final GeneratedColumn<int> expiredTasks = GeneratedColumn<int>(
+      'expired_tasks', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _dueTodayTasksMeta =
+      const VerificationMeta('dueTodayTasks');
+  @override
+  late final GeneratedColumn<int> dueTodayTasks = GeneratedColumn<int>(
+      'due_today_tasks', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        userId,
+        totalTasks,
+        pendingTasks,
+        completedTasks,
+        checkedInTasks,
+        expiredTasks,
+        dueTodayTasks,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tasks_stats';
+  @override
+  VerificationContext validateIntegrity(Insertable<TaskStatsEntity> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('total_tasks')) {
+      context.handle(
+          _totalTasksMeta,
+          totalTasks.isAcceptableOrUnknown(
+              data['total_tasks']!, _totalTasksMeta));
+    }
+    if (data.containsKey('pending_tasks')) {
+      context.handle(
+          _pendingTasksMeta,
+          pendingTasks.isAcceptableOrUnknown(
+              data['pending_tasks']!, _pendingTasksMeta));
+    }
+    if (data.containsKey('completed_tasks')) {
+      context.handle(
+          _completedTasksMeta,
+          completedTasks.isAcceptableOrUnknown(
+              data['completed_tasks']!, _completedTasksMeta));
+    }
+    if (data.containsKey('checked_in_tasks')) {
+      context.handle(
+          _checkedInTasksMeta,
+          checkedInTasks.isAcceptableOrUnknown(
+              data['checked_in_tasks']!, _checkedInTasksMeta));
+    }
+    if (data.containsKey('expired_tasks')) {
+      context.handle(
+          _expiredTasksMeta,
+          expiredTasks.isAcceptableOrUnknown(
+              data['expired_tasks']!, _expiredTasksMeta));
+    }
+    if (data.containsKey('due_today_tasks')) {
+      context.handle(
+          _dueTodayTasksMeta,
+          dueTodayTasks.isAcceptableOrUnknown(
+              data['due_today_tasks']!, _dueTodayTasksMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TaskStatsEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TaskStatsEntity(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
+      totalTasks: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}total_tasks'])!,
+      pendingTasks: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}pending_tasks'])!,
+      completedTasks: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}completed_tasks'])!,
+      checkedInTasks: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}checked_in_tasks'])!,
+      expiredTasks: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}expired_tasks'])!,
+      dueTodayTasks: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}due_today_tasks'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $TasksStatsTable createAlias(String alias) {
+    return $TasksStatsTable(attachedDatabase, alias);
+  }
+}
+
+class TaskStatsEntity extends DataClass implements Insertable<TaskStatsEntity> {
+  final String id;
+  final String userId;
+  final int totalTasks;
+  final int pendingTasks;
+  final int completedTasks;
+  final int checkedInTasks;
+  final int expiredTasks;
+  final int dueTodayTasks;
+  final DateTime updatedAt;
+  const TaskStatsEntity(
+      {required this.id,
+      required this.userId,
+      required this.totalTasks,
+      required this.pendingTasks,
+      required this.completedTasks,
+      required this.checkedInTasks,
+      required this.expiredTasks,
+      required this.dueTodayTasks,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['user_id'] = Variable<String>(userId);
+    map['total_tasks'] = Variable<int>(totalTasks);
+    map['pending_tasks'] = Variable<int>(pendingTasks);
+    map['completed_tasks'] = Variable<int>(completedTasks);
+    map['checked_in_tasks'] = Variable<int>(checkedInTasks);
+    map['expired_tasks'] = Variable<int>(expiredTasks);
+    map['due_today_tasks'] = Variable<int>(dueTodayTasks);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  TasksStatsCompanion toCompanion(bool nullToAbsent) {
+    return TasksStatsCompanion(
+      id: Value(id),
+      userId: Value(userId),
+      totalTasks: Value(totalTasks),
+      pendingTasks: Value(pendingTasks),
+      completedTasks: Value(completedTasks),
+      checkedInTasks: Value(checkedInTasks),
+      expiredTasks: Value(expiredTasks),
+      dueTodayTasks: Value(dueTodayTasks),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory TaskStatsEntity.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TaskStatsEntity(
+      id: serializer.fromJson<String>(json['id']),
+      userId: serializer.fromJson<String>(json['userId']),
+      totalTasks: serializer.fromJson<int>(json['totalTasks']),
+      pendingTasks: serializer.fromJson<int>(json['pendingTasks']),
+      completedTasks: serializer.fromJson<int>(json['completedTasks']),
+      checkedInTasks: serializer.fromJson<int>(json['checkedInTasks']),
+      expiredTasks: serializer.fromJson<int>(json['expiredTasks']),
+      dueTodayTasks: serializer.fromJson<int>(json['dueTodayTasks']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'userId': serializer.toJson<String>(userId),
+      'totalTasks': serializer.toJson<int>(totalTasks),
+      'pendingTasks': serializer.toJson<int>(pendingTasks),
+      'completedTasks': serializer.toJson<int>(completedTasks),
+      'checkedInTasks': serializer.toJson<int>(checkedInTasks),
+      'expiredTasks': serializer.toJson<int>(expiredTasks),
+      'dueTodayTasks': serializer.toJson<int>(dueTodayTasks),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  TaskStatsEntity copyWith(
+          {String? id,
+          String? userId,
+          int? totalTasks,
+          int? pendingTasks,
+          int? completedTasks,
+          int? checkedInTasks,
+          int? expiredTasks,
+          int? dueTodayTasks,
+          DateTime? updatedAt}) =>
+      TaskStatsEntity(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        totalTasks: totalTasks ?? this.totalTasks,
+        pendingTasks: pendingTasks ?? this.pendingTasks,
+        completedTasks: completedTasks ?? this.completedTasks,
+        checkedInTasks: checkedInTasks ?? this.checkedInTasks,
+        expiredTasks: expiredTasks ?? this.expiredTasks,
+        dueTodayTasks: dueTodayTasks ?? this.dueTodayTasks,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  TaskStatsEntity copyWithCompanion(TasksStatsCompanion data) {
+    return TaskStatsEntity(
+      id: data.id.present ? data.id.value : this.id,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      totalTasks:
+          data.totalTasks.present ? data.totalTasks.value : this.totalTasks,
+      pendingTasks: data.pendingTasks.present
+          ? data.pendingTasks.value
+          : this.pendingTasks,
+      completedTasks: data.completedTasks.present
+          ? data.completedTasks.value
+          : this.completedTasks,
+      checkedInTasks: data.checkedInTasks.present
+          ? data.checkedInTasks.value
+          : this.checkedInTasks,
+      expiredTasks: data.expiredTasks.present
+          ? data.expiredTasks.value
+          : this.expiredTasks,
+      dueTodayTasks: data.dueTodayTasks.present
+          ? data.dueTodayTasks.value
+          : this.dueTodayTasks,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TaskStatsEntity(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('totalTasks: $totalTasks, ')
+          ..write('pendingTasks: $pendingTasks, ')
+          ..write('completedTasks: $completedTasks, ')
+          ..write('checkedInTasks: $checkedInTasks, ')
+          ..write('expiredTasks: $expiredTasks, ')
+          ..write('dueTodayTasks: $dueTodayTasks, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, userId, totalTasks, pendingTasks,
+      completedTasks, checkedInTasks, expiredTasks, dueTodayTasks, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TaskStatsEntity &&
+          other.id == this.id &&
+          other.userId == this.userId &&
+          other.totalTasks == this.totalTasks &&
+          other.pendingTasks == this.pendingTasks &&
+          other.completedTasks == this.completedTasks &&
+          other.checkedInTasks == this.checkedInTasks &&
+          other.expiredTasks == this.expiredTasks &&
+          other.dueTodayTasks == this.dueTodayTasks &&
+          other.updatedAt == this.updatedAt);
+}
+
+class TasksStatsCompanion extends UpdateCompanion<TaskStatsEntity> {
+  final Value<String> id;
+  final Value<String> userId;
+  final Value<int> totalTasks;
+  final Value<int> pendingTasks;
+  final Value<int> completedTasks;
+  final Value<int> checkedInTasks;
+  final Value<int> expiredTasks;
+  final Value<int> dueTodayTasks;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const TasksStatsCompanion({
+    this.id = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.totalTasks = const Value.absent(),
+    this.pendingTasks = const Value.absent(),
+    this.completedTasks = const Value.absent(),
+    this.checkedInTasks = const Value.absent(),
+    this.expiredTasks = const Value.absent(),
+    this.dueTodayTasks = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TasksStatsCompanion.insert({
+    required String id,
+    required String userId,
+    this.totalTasks = const Value.absent(),
+    this.pendingTasks = const Value.absent(),
+    this.completedTasks = const Value.absent(),
+    this.checkedInTasks = const Value.absent(),
+    this.expiredTasks = const Value.absent(),
+    this.dueTodayTasks = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        userId = Value(userId),
+        updatedAt = Value(updatedAt);
+  static Insertable<TaskStatsEntity> custom({
+    Expression<String>? id,
+    Expression<String>? userId,
+    Expression<int>? totalTasks,
+    Expression<int>? pendingTasks,
+    Expression<int>? completedTasks,
+    Expression<int>? checkedInTasks,
+    Expression<int>? expiredTasks,
+    Expression<int>? dueTodayTasks,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userId != null) 'user_id': userId,
+      if (totalTasks != null) 'total_tasks': totalTasks,
+      if (pendingTasks != null) 'pending_tasks': pendingTasks,
+      if (completedTasks != null) 'completed_tasks': completedTasks,
+      if (checkedInTasks != null) 'checked_in_tasks': checkedInTasks,
+      if (expiredTasks != null) 'expired_tasks': expiredTasks,
+      if (dueTodayTasks != null) 'due_today_tasks': dueTodayTasks,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TasksStatsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? userId,
+      Value<int>? totalTasks,
+      Value<int>? pendingTasks,
+      Value<int>? completedTasks,
+      Value<int>? checkedInTasks,
+      Value<int>? expiredTasks,
+      Value<int>? dueTodayTasks,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return TasksStatsCompanion(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      totalTasks: totalTasks ?? this.totalTasks,
+      pendingTasks: pendingTasks ?? this.pendingTasks,
+      completedTasks: completedTasks ?? this.completedTasks,
+      checkedInTasks: checkedInTasks ?? this.checkedInTasks,
+      expiredTasks: expiredTasks ?? this.expiredTasks,
+      dueTodayTasks: dueTodayTasks ?? this.dueTodayTasks,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (totalTasks.present) {
+      map['total_tasks'] = Variable<int>(totalTasks.value);
+    }
+    if (pendingTasks.present) {
+      map['pending_tasks'] = Variable<int>(pendingTasks.value);
+    }
+    if (completedTasks.present) {
+      map['completed_tasks'] = Variable<int>(completedTasks.value);
+    }
+    if (checkedInTasks.present) {
+      map['checked_in_tasks'] = Variable<int>(checkedInTasks.value);
+    }
+    if (expiredTasks.present) {
+      map['expired_tasks'] = Variable<int>(expiredTasks.value);
+    }
+    if (dueTodayTasks.present) {
+      map['due_today_tasks'] = Variable<int>(dueTodayTasks.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TasksStatsCompanion(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('totalTasks: $totalTasks, ')
+          ..write('pendingTasks: $pendingTasks, ')
+          ..write('completedTasks: $completedTasks, ')
+          ..write('checkedInTasks: $checkedInTasks, ')
+          ..write('expiredTasks: $expiredTasks, ')
+          ..write('dueTodayTasks: $dueTodayTasks, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TasksTable tasks = $TasksTable(this);
   late final $UsersTable users = $UsersTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
+  late final $TasksStatsTable tasksStats = $TasksStatsTable(this);
   late final TaskDao taskDao = TaskDao(this as AppDatabase);
   late final UserDao userDao = UserDao(this as AppDatabase);
   late final SyncQueueDao syncQueueDao = SyncQueueDao(this as AppDatabase);
@@ -2099,7 +2583,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [tasks, users, syncQueue];
+  List<DatabaseSchemaEntity> get allSchemaEntities =>
+      [tasks, users, syncQueue, tasksStats];
 }
 
 typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
@@ -3020,6 +3505,244 @@ typedef $$SyncQueueTableProcessedTableManager = ProcessedTableManager<
     ),
     SyncQueueEntity,
     PrefetchHooks Function()>;
+typedef $$TasksStatsTableCreateCompanionBuilder = TasksStatsCompanion Function({
+  required String id,
+  required String userId,
+  Value<int> totalTasks,
+  Value<int> pendingTasks,
+  Value<int> completedTasks,
+  Value<int> checkedInTasks,
+  Value<int> expiredTasks,
+  Value<int> dueTodayTasks,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$TasksStatsTableUpdateCompanionBuilder = TasksStatsCompanion Function({
+  Value<String> id,
+  Value<String> userId,
+  Value<int> totalTasks,
+  Value<int> pendingTasks,
+  Value<int> completedTasks,
+  Value<int> checkedInTasks,
+  Value<int> expiredTasks,
+  Value<int> dueTodayTasks,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$TasksStatsTableFilterComposer
+    extends Composer<_$AppDatabase, $TasksStatsTable> {
+  $$TasksStatsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get totalTasks => $composableBuilder(
+      column: $table.totalTasks, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pendingTasks => $composableBuilder(
+      column: $table.pendingTasks, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get completedTasks => $composableBuilder(
+      column: $table.completedTasks,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get checkedInTasks => $composableBuilder(
+      column: $table.checkedInTasks,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get expiredTasks => $composableBuilder(
+      column: $table.expiredTasks, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get dueTodayTasks => $composableBuilder(
+      column: $table.dueTodayTasks, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$TasksStatsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TasksStatsTable> {
+  $$TasksStatsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get totalTasks => $composableBuilder(
+      column: $table.totalTasks, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pendingTasks => $composableBuilder(
+      column: $table.pendingTasks,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get completedTasks => $composableBuilder(
+      column: $table.completedTasks,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get checkedInTasks => $composableBuilder(
+      column: $table.checkedInTasks,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get expiredTasks => $composableBuilder(
+      column: $table.expiredTasks,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get dueTodayTasks => $composableBuilder(
+      column: $table.dueTodayTasks,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$TasksStatsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TasksStatsTable> {
+  $$TasksStatsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<int> get totalTasks => $composableBuilder(
+      column: $table.totalTasks, builder: (column) => column);
+
+  GeneratedColumn<int> get pendingTasks => $composableBuilder(
+      column: $table.pendingTasks, builder: (column) => column);
+
+  GeneratedColumn<int> get completedTasks => $composableBuilder(
+      column: $table.completedTasks, builder: (column) => column);
+
+  GeneratedColumn<int> get checkedInTasks => $composableBuilder(
+      column: $table.checkedInTasks, builder: (column) => column);
+
+  GeneratedColumn<int> get expiredTasks => $composableBuilder(
+      column: $table.expiredTasks, builder: (column) => column);
+
+  GeneratedColumn<int> get dueTodayTasks => $composableBuilder(
+      column: $table.dueTodayTasks, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$TasksStatsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $TasksStatsTable,
+    TaskStatsEntity,
+    $$TasksStatsTableFilterComposer,
+    $$TasksStatsTableOrderingComposer,
+    $$TasksStatsTableAnnotationComposer,
+    $$TasksStatsTableCreateCompanionBuilder,
+    $$TasksStatsTableUpdateCompanionBuilder,
+    (
+      TaskStatsEntity,
+      BaseReferences<_$AppDatabase, $TasksStatsTable, TaskStatsEntity>
+    ),
+    TaskStatsEntity,
+    PrefetchHooks Function()> {
+  $$TasksStatsTableTableManager(_$AppDatabase db, $TasksStatsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TasksStatsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TasksStatsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TasksStatsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> userId = const Value.absent(),
+            Value<int> totalTasks = const Value.absent(),
+            Value<int> pendingTasks = const Value.absent(),
+            Value<int> completedTasks = const Value.absent(),
+            Value<int> checkedInTasks = const Value.absent(),
+            Value<int> expiredTasks = const Value.absent(),
+            Value<int> dueTodayTasks = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TasksStatsCompanion(
+            id: id,
+            userId: userId,
+            totalTasks: totalTasks,
+            pendingTasks: pendingTasks,
+            completedTasks: completedTasks,
+            checkedInTasks: checkedInTasks,
+            expiredTasks: expiredTasks,
+            dueTodayTasks: dueTodayTasks,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String userId,
+            Value<int> totalTasks = const Value.absent(),
+            Value<int> pendingTasks = const Value.absent(),
+            Value<int> completedTasks = const Value.absent(),
+            Value<int> checkedInTasks = const Value.absent(),
+            Value<int> expiredTasks = const Value.absent(),
+            Value<int> dueTodayTasks = const Value.absent(),
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TasksStatsCompanion.insert(
+            id: id,
+            userId: userId,
+            totalTasks: totalTasks,
+            pendingTasks: pendingTasks,
+            completedTasks: completedTasks,
+            checkedInTasks: checkedInTasks,
+            expiredTasks: expiredTasks,
+            dueTodayTasks: dueTodayTasks,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$TasksStatsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $TasksStatsTable,
+    TaskStatsEntity,
+    $$TasksStatsTableFilterComposer,
+    $$TasksStatsTableOrderingComposer,
+    $$TasksStatsTableAnnotationComposer,
+    $$TasksStatsTableCreateCompanionBuilder,
+    $$TasksStatsTableUpdateCompanionBuilder,
+    (
+      TaskStatsEntity,
+      BaseReferences<_$AppDatabase, $TasksStatsTable, TaskStatsEntity>
+    ),
+    TaskStatsEntity,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3030,4 +3753,6 @@ class $AppDatabaseManager {
       $$UsersTableTableManager(_db, _db.users);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
+  $$TasksStatsTableTableManager get tasksStats =>
+      $$TasksStatsTableTableManager(_db, _db.tasksStats);
 }
